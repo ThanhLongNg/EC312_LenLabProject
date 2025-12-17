@@ -61,6 +61,8 @@ Route::prefix('admin')->middleware('admin')->group(function () {
 Route::prefix('api')->group(function () {
     Route::get('/products', [App\Http\Controllers\ProductPageController::class, 'apiIndex']);
     Route::get('/landing/products', [App\Http\Controllers\ProductPageController::class, 'landingProducts']);
+    Route::get('/categories', [App\Http\Controllers\CategoryController::class, 'apiIndex']);
+    Route::get('/categories/{id}/products', [App\Http\Controllers\CategoryController::class, 'getProductsByCategory']);
     Route::get('/cart', [App\Http\Controllers\CartController::class, 'index']);
     Route::post('/cart/add', [App\Http\Controllers\CartController::class, 'add'])->middleware('web');
     Route::post('/cart/update', [App\Http\Controllers\CartController::class, 'updateQuantity'])->middleware('web');

@@ -99,21 +99,49 @@ class ProductPageController extends Controller
     public function landingProducts()
     {
         try {
-            $products = Product::take(6)->get()->map(function($product) {
-                return [
-                    'id' => $product->id,
-                    'name' => $product->name ?? 'Sản phẩm',
-                    'image' => $product->image ?? 'default.jpg'
-                ];
-            });
+            $products = Product::where('status', 1)
+                ->orderBy('id', 'desc')
+                ->take(8)
+                ->get()
+                ->map(function($product) {
+                    // Map category_id to category name
+                    $categoryMap = [
+                        1 => 'Nguyên phụ liệu',
+                        2 => 'Đồ trang trí', 
+                        3 => 'Thời trang len',
+                        4 => 'Combo tự làm',
+                        5 => 'Sách hướng dẫn',
+                        6 => 'Thú bông len'
+                    ];
+                    
+                    $category = 'Chưa phân loại';
+                    if (isset($product->category) && $product->category) {
+                        $category = $product->category;
+                    } elseif (isset($product->category_id)) {
+                        $category = $categoryMap[$product->category_id] ?? 'Chưa phân loại';
+                    }
+                    
+                    return [
+                        'id' => $product->id,
+                        'name' => $product->name ?? 'Sản phẩm',
+                        'price' => (float) ($product->price ?? 0),
+                        'image' => $product->image ?? null,
+                        'category' => $category,
+                        'description' => $product->description ?? '',
+                        'is_new' => isset($product->new) && ($product->new == 1 || $product->new == '1'),
+                        'quantity' => $product->quantity ?? 0
+                    ];
+                });
             
             return response()->json([
-                'products' => $products
+                'products' => $products,
+                'success' => true
             ]);
             
         } catch (\Exception $e) {
             return response()->json([
                 'products' => [],
+                'success' => false,
                 'error' => $e->getMessage()
             ]);
         }
