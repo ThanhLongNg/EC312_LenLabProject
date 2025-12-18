@@ -2,18 +2,18 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ProductVariant extends Model
 {
-    use HasFactory;
-
+    protected $table = 'product_variants';
+    public $timestamps = false;
+    
     protected $fillable = [
         'product_id',
         'variant_name',
-        'price',
-        'image'
+        'image',
+        'price'
     ];
 
     public function product()

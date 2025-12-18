@@ -198,6 +198,39 @@
         }
         
         /* Mobile menu enhancements */
+        
+        /* Login Popup Styles */
+        #loginPopup {
+            backdrop-filter: blur(8px);
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        #loginPopupContent {
+            animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .popup-hero-image {
+            background: linear-gradient(135deg, rgba(35, 30, 15, 0.8), rgba(42, 35, 24, 0.6)),
+                        url('https://images.unsplash.com/photo-1586281010691-3d8b8c0e5b8d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80');
+            background-size: cover;
+            background-position: center;
+        }
         .menu-dropdown .material-symbols-outlined {
             transition: transform 0.2s ease;
         }
@@ -415,7 +448,7 @@
                     <span class="material-symbols-outlined text-gray-800 dark:text-white">account_circle</span>
                 </button>
             @else
-                <button class="flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors" onclick="window.location.href='{{ route('login') }}'">
+                <button class="flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors" onclick="showLoginPopup()">
                     <span class="material-symbols-outlined text-gray-800 dark:text-white">account_circle</span>
                 </button>
             @endauth
@@ -508,7 +541,7 @@
                     <div class="flex items-center gap-2 text-[10px] text-gray-500 uppercase font-bold tracking-wider">
                         <span class="text-primary">Trend</span><span>•</span><span>05 T10, 2023</span>
                     </div>
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-white leading-tight">Xu hướng màu sắc Thu Đông 2023</h3>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white leading-tight">Xu hướng màu sắc Thu Đông 2025</h3>
                     <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">Những tông màu ấm áp dự kiến sẽ lên ngôi trong mùa lạnh năm nay.</p>
                 </div>
             </article>
@@ -1153,7 +1186,75 @@ $(document).ready(function() {
         $('<div class="fixed bottom-40 right-20 w-3 h-3 bg-primary/20 rounded-full animate-float" data-speed="0.2"></div>').appendTo('body');
     }, 2000);
 });
+
+// Login Popup Functions
+function showLoginPopup() {
+    $('#loginPopup').removeClass('hidden').addClass('flex');
+    setTimeout(() => {
+        $('#loginPopupContent').removeClass('scale-95 opacity-0').addClass('scale-100 opacity-100');
+    }, 10);
+}
+
+function hideLoginPopup() {
+    $('#loginPopupContent').removeClass('scale-100 opacity-100').addClass('scale-95 opacity-0');
+    setTimeout(() => {
+        $('#loginPopup').removeClass('flex').addClass('hidden');
+    }, 200);
+}
+
+// Close popup when clicking outside
+$(document).on('click', '#loginPopup', function(e) {
+    if (e.target === this) {
+        hideLoginPopup();
+    }
+});
+
+// Close popup with Escape key
+$(document).on('keydown', function(e) {
+    if (e.key === 'Escape' && !$('#loginPopup').hasClass('hidden')) {
+        hideLoginPopup();
+    }
+});
 </script>
+
+<!-- Login/Register Popup -->
+<div id="loginPopup" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden items-center justify-center p-4">
+    <div id="loginPopupContent" class="relative bg-gradient-to-b from-[#2a2318] to-[#1a1610] rounded-3xl p-8 max-w-sm w-full mx-4 shadow-2xl border border-primary/20 transform scale-95 opacity-0 transition-all duration-200">
+        <!-- Close Button -->
+        <button onclick="hideLoginPopup()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors z-10">
+            <span class="material-symbols-outlined text-white/70 text-xl">close</span>
+        </button>
+        
+        <!-- Hero Image -->
+        <div class="popup-hero-image relative h-32 mb-6 rounded-2xl overflow-hidden">
+            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                    <span class="material-symbols-outlined text-white text-2xl">yarn</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Content -->
+        <div class="text-center mb-8">
+            <h2 class="text-2xl font-bold text-white mb-3">Bạn chưa đăng nhập?</h2>
+            <p class="text-gray-400 text-sm leading-relaxed">
+                Vui lòng đăng nhập hoặc đăng ký tài khoản để chúng tôi có thể gửi những sản phẩm len ấm áp đến tay bạn.
+            </p>
+        </div>
+        
+        <!-- Action Button -->
+        <a href="{{ route('login') }}" 
+           class="block w-full bg-gradient-to-r from-primary to-yellow-500 text-background-dark font-semibold py-4 px-6 rounded-2xl text-center hover:shadow-lg hover:shadow-primary/25 transition-all duration-300 transform hover:scale-105 mb-4">
+            Đăng nhập / Đăng ký
+        </a>
+        
+        <!-- Skip Button -->
+        <button onclick="hideLoginPopup()" 
+                class="block w-full text-gray-400 text-sm py-2 hover:text-white transition-colors">
+            Bỏ qua
+        </button>
+    </div>
+</div>
 
 </body>
 </html>

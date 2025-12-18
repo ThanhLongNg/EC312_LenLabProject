@@ -45,6 +45,11 @@ class ProductPageController extends Controller
         try {
             $query = Product::query();
             
+            // Filter theo category
+            if ($request->has('category') && $request->category !== 'all') {
+                $query->where('category_id', $request->category);
+            }
+            
             // Tìm kiếm theo từ khóa
             if ($request->has('keyword') && $request->keyword) {
                 $query->where('name', 'like', '%' . $request->keyword . '%');
@@ -53,6 +58,29 @@ class ProductPageController extends Controller
                 if (\Schema::hasColumn('products', 'category')) {
                     $query->orWhere('category', 'like', '%' . $request->keyword . '%');
                 }
+            }
+            
+            // Sorting
+            if ($request->has('sort')) {
+                switch($request->sort) {
+                    case 'price-asc':
+                        $query->orderBy('price', 'asc');
+                        break;
+                    case 'price-desc':
+                        $query->orderBy('price', 'desc');
+                        break;
+                    case 'name-asc':
+                        $query->orderBy('name', 'asc');
+                        break;
+                    case 'name-desc':
+                        $query->orderBy('name', 'desc');
+                        break;
+                    default:
+                        $query->orderBy('id', 'desc');
+                        break;
+                }
+            } else {
+                $query->orderBy('id', 'desc');
             }
             
             $products = $query->get()->map(function($product) {
@@ -150,7 +178,58 @@ class ProductPageController extends Controller
     // Chi tiết sản phẩm
     public function show($id)
     {
-        $product = Product::findOrFail($id);
-        return view('product', compact('product'));
+        $product = Product::with('variants')->findOrFail($id);
+        
+        // Lấy thông tin variants
+        $availableVariants = $product->getAvailableVariants();
+        $hasVariants = $product->hasVariants();
+        
+        // Lấy thông tin hình ảnh
+        $productImages = $product->getAllImages();
+        $hasMultipleImages = $product->hasMultipleImages();
+        
+        return view('product', compact(
+            'product', 
+            'availableVariants', 
+            'hasVariants',
+            'productImages',
+            'hasMultipleImages'
+        ));
+    }
+    
+    // API để lấy thông tin variants của sản phẩm
+    public function getVariants($id)
+    {
+        try {
+            $product = Product::with('variants')->findOrFail($id);
+            
+            return response()->json([
+                'success' => true,
+                'product' => [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'price' => $product->price,
+                    'has_variants' => $product->variants->count() > 0
+                ],
+                'variants' => $product->variants->map(function($variant) {
+                    return [
+                        'id' => $variant->id,
+                        'variant_name' => $variant->variant_name,
+                        'price' => $variant->price,
+                        'image' => $variant->image
+                    ];
+                }),
+                'product_images' => $product->getAllImages(),
+                'has_multiple_images' => $product->hasMultipleImages(),
+                'available_variants' => $product->getAvailableVariants(),
+                'has_variants' => $product->hasVariants()
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 404);
+        }
     }
 }

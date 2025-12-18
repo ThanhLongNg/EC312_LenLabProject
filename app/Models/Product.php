@@ -13,6 +13,7 @@ class Product extends Model
         'price',
         'quantity',
         'image',
+        'images',
         'description',
         'status',
         'category_id',
@@ -21,8 +22,54 @@ class Product extends Model
         'new'
     ];
 
+    protected $casts = [
+        'images' => 'array'
+    ];
+
     public function variants()
     {
         return $this->hasMany(ProductVariant::class);
+    }
+    
+    // Kiểm tra xem sản phẩm có nhiều biến thể không
+    public function hasMultipleVariants()
+    {
+        return $this->variants()->count() > 1;
+    }
+    
+    // Lấy tất cả tên biến thể có sẵn
+    public function getAvailableVariants()
+    {
+        return $this->variants()->whereNotNull('variant_name')->pluck('variant_name');
+    }
+    
+    // Kiểm tra xem có nhiều biến thể không
+    public function hasVariants()
+    {
+        return $this->variants()->count() > 0;
+    }
+
+    // Lấy tất cả hình ảnh của sản phẩm (bao gồm hình chính và hình phụ)
+    public function getAllImages()
+    {
+        $images = [];
+        
+        // Thêm hình ảnh chính
+        if ($this->image) {
+            $images[] = $this->image;
+        }
+        
+        // Thêm hình ảnh phụ nếu có (giả sử có cột images chứa JSON array)
+        if (isset($this->images) && is_array($this->images)) {
+            $images = array_merge($images, $this->images);
+        }
+        
+        return array_unique($images);
+    }
+
+    // Kiểm tra xem có nhiều hình ảnh không
+    public function hasMultipleImages()
+    {
+        return count($this->getAllImages()) > 1;
     }
 }

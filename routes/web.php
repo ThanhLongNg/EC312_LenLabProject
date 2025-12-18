@@ -7,14 +7,35 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 
 
 Route::get('/', function () {
     return view('landingpage');
 });
 
+Route::get('/test-info', function () {
+    return view('test-info');
+})->name('test.info');
+
+Route::get('/debug-auth', function () {
+    return [
+        'authenticated' => Auth::check(),
+        'user' => Auth::user(),
+        'session_id' => session()->getId(),
+    ];
+});
+
+Route::get('/test-login', function () {
+    return view('test-login');
+})->name('test.login');
+
+
+
 // Routes cho user
-Route::get('/san-pham', [App\Http\Controllers\ProductPageController::class, 'index'])->name('products');
+Route::get('/san-pham', function () {
+    return view('products');
+})->name('products');
 Route::get('/san-pham/{id}', [App\Http\Controllers\ProductPageController::class, 'show'])->name('product.detail');
 
 Route::get('/gioi-thieu', function () {
@@ -29,7 +50,18 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::get('/profile', function () {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return redirect()->route('login')->with('error', 'Vui lòng đăng nhập');
+            }
+            return view('profile', compact('user'));
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    })->name('profile');
+    
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
@@ -60,6 +92,7 @@ Route::prefix('admin')->middleware('admin')->group(function () {
 // API Routes for user-facing website
 Route::prefix('api')->group(function () {
     Route::get('/products', [App\Http\Controllers\ProductPageController::class, 'apiIndex']);
+    Route::get('/products/{id}/variants', [App\Http\Controllers\ProductPageController::class, 'getVariants']);
     Route::get('/landing/products', [App\Http\Controllers\ProductPageController::class, 'landingProducts']);
     Route::get('/categories', [App\Http\Controllers\CategoryController::class, 'apiIndex']);
     Route::get('/categories/{id}/products', [App\Http\Controllers\CategoryController::class, 'getProductsByCategory']);

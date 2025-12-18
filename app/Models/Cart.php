@@ -9,10 +9,20 @@ class Cart extends Model
 {
     use HasFactory;
 
+    protected $table = 'cart'; // Specify table name
+
     protected $fillable = [
         'user_id',
         'product_id',
-        'quantity'
+        'quantity',
+        'price_at_time',
+        'variant_info',
+        'session_id'
+    ];
+
+    protected $casts = [
+        'variant_info' => 'array',
+        'price_at_time' => 'decimal:2'
     ];
 
     public function user()
