@@ -17,9 +17,12 @@ class DatabaseSeeder extends Seeder
     {
         // Seed users first
         $this->call([
+            ProvinceWardSeeder::class,
             UserSeeder::class,
             ProductSeeder::class,
             ProductVariantSeeder::class,
         ]);
+
+        
     }
 }

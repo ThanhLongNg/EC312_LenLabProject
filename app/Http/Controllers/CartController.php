@@ -77,86 +77,104 @@ class CartController extends Controller
     // Thêm sản phẩm vào giỏ
     public function add(Request $request)
     {
-        if (!Auth::check()) {
-            return response()->json(['success' => false, 'message' => 'Vui lòng đăng nhập']);
-        }
-
-        $userId = Auth::id();
-        
-        // Validate input
-        $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:1',
-            'variant_name' => 'nullable|string|max:100'
-        ]);
-
-        // Get product with variants
-        $product = Product::with('variants')->find($request->product_id);
-        if (!$product) {
-            return response()->json(['success' => false, 'message' => 'Sản phẩm không tồn tại']);
-        }
-
-        // Tạo variant info
-        $variantInfo = [
-            'variant_name' => $request->variant_name ?? null,
-            'added_from' => $request->source ?? 'product_page'
-        ];
-        
-        $productPrice = $product->price;
-        
-        // Nếu sản phẩm có variants, kiểm tra và lấy giá từ variant
-        if ($product->variants->count() > 0) {
-            $variant = null;
-            
-            if ($request->variant_name) {
-                $variant = $product->variants()
-                    ->where('variant_name', $request->variant_name)
-                    ->first();
+        try {
+            if (!Auth::check()) {
+                return response()->json(['success' => false, 'message' => 'Vui lòng đăng nhập'], 401);
             }
+
+            $userId = Auth::id();
             
-            if ($variant) {
-                $productPrice = $variant->price ?? $product->price;
-            } else if ($product->hasMultipleVariants() && $request->variant_name) {
-                // Nếu sản phẩm có nhiều variants nhưng không tìm thấy variant phù hợp
-                return response()->json([
-                    'success' => false, 
-                    'message' => 'Biến thể sản phẩm không tồn tại'
+            // Validate input
+            $validated = $request->validate([
+                'product_id' => 'required|exists:products,id',
+                'quantity' => 'required|integer|min:1',
+                'variant_name' => 'nullable|string|max:100'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Dữ liệu không hợp lệ',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Có lỗi xảy ra: ' . $e->getMessage()
+            ], 500);
+        }
+
+        try {
+            // Get product with variants
+            $product = Product::with('variants')->find($validated['product_id']);
+            if (!$product) {
+                return response()->json(['success' => false, 'message' => 'Sản phẩm không tồn tại'], 404);
+            }
+
+            // Tạo variant info
+            $variantInfo = [
+                'variant_name' => $validated['variant_name'] ?? null,
+                'added_from' => $request->input('source', 'product_page')
+            ];
+            
+            $productPrice = $product->price;
+            
+            // Nếu sản phẩm có variants, kiểm tra và lấy giá từ variant
+            if ($product->variants->count() > 0) {
+                $variant = null;
+                
+                if ($validated['variant_name']) {
+                    $variant = $product->variants()
+                        ->where('variant_name', $validated['variant_name'])
+                        ->first();
+                }
+                
+                if ($variant) {
+                    $productPrice = $variant->price ?? $product->price;
+                } else if ($product->hasMultipleVariants() && $validated['variant_name']) {
+                    // Nếu sản phẩm có nhiều variants nhưng không tìm thấy variant phù hợp
+                    return response()->json([
+                        'success' => false, 
+                        'message' => 'Biến thể sản phẩm không tồn tại'
+                    ], 404);
+                }
+            }
+
+            // Check if item with same variant already exists in cart
+            $item = Cart::where('user_id', $userId)
+                ->where('product_id', $validated['product_id'])
+                ->where('variant_info', json_encode($variantInfo))
+                ->first();
+
+            if ($item) {
+                // Update existing item
+                $item->quantity += $validated['quantity'];
+                $item->save(); // Laravel will automatically update updated_at
+            } else {
+                // Create new cart item with detailed info
+                Cart::create([
+                    'user_id' => $userId,
+                    'product_id' => $validated['product_id'],
+                    'quantity' => $validated['quantity'],
+                    'price_at_time' => $productPrice,
+                    'variant_info' => $variantInfo, // No need to json_encode, Laravel will handle it
                 ]);
             }
-        }
 
-        // Check if item with same variant already exists in cart
-        $item = Cart::where('user_id', $userId)
-            ->where('product_id', $request->product_id)
-            ->where('variant_info', json_encode($variantInfo))
-            ->first();
+            // Get updated cart count
+            $cartCount = Cart::where('user_id', $userId)->sum('quantity');
 
-        if ($item) {
-            // Update existing item
-            $item->quantity += $request->quantity;
-            $item->updated_at = now();
-            $item->save();
-        } else {
-            // Create new cart item with detailed info
-            Cart::create([
-                'user_id' => $userId,
-                'product_id' => $request->product_id,
-                'quantity' => $request->quantity,
-                'price_at_time' => $productPrice,
-                'variant_info' => json_encode($variantInfo),
-                'created_at' => now(),
-                'updated_at' => now()
+            return response()->json([
+                'success' => true, 
+                'message' => 'Đã thêm sản phẩm vào giỏ hàng',
+                'cart_count' => $cartCount
             ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng: ' . $e->getMessage()
+            ], 500);
         }
-
-        // Get updated cart count
-        $cartCount = Cart::where('user_id', $userId)->sum('quantity');
-
-        return response()->json([
-            'success' => true, 
-            'message' => 'Đã thêm sản phẩm vào giỏ hàng',
-            'cart_count' => $cartCount
-        ]);
     }
 
     // Tăng giảm số lượng
@@ -186,8 +204,7 @@ class CartController extends Controller
             }
         }
 
-        $item->updated_at = now(); // Update timestamp
-        $item->save();
+        $item->save(); // Laravel will automatically update updated_at
         
         return response()->json([
             'success' => true, 

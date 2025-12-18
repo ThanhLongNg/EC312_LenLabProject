@@ -557,15 +557,46 @@
         }
 
         function addToCart(productId) {
-            // Add to cart functionality
-            console.log('Add to cart product:', productId);
-            
-            // Show success message
-            const toast = $('<div class="fixed top-4 right-4 bg-primary text-background-dark px-4 py-2 rounded-lg font-medium z-50">Đã thêm vào giỏ hàng!</div>');
-            $('body').append(toast);
-            setTimeout(() => {
-                toast.fadeOut(() => toast.remove());
-            }, 2000);
+            @auth
+                $.ajaxSetup({
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    }
+                });
+                
+                const cartData = {
+                    product_id: productId,
+                    quantity: 1
+                };
+                
+                $.post('/api/cart/add', cartData, function(response) {
+                    if (response.success) {
+                        // Show success message
+                        const toast = $('<div class="fixed top-4 right-4 bg-primary text-background-dark px-4 py-2 rounded-lg font-medium z-50">✓ Đã thêm vào giỏ hàng!</div>');
+                        $('body').append(toast);
+                        setTimeout(() => {
+                            toast.fadeOut(() => toast.remove());
+                        }, 2000);
+                    } else {
+                        console.error('Cart add error:', response);
+                        alert(response.message || 'Có lỗi xảy ra, vui lòng thử lại!');
+                    }
+                }).fail(function(xhr, status, error) {
+                    console.error('Cart add failed:', xhr.responseText, status, error);
+                    let errorMessage = 'Có lỗi xảy ra, vui lòng thử lại!';
+                    
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    
+                    alert(errorMessage);
+                });
+            @else
+                // Show login popup or redirect
+                if (confirm('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng. Chuyển đến trang đăng nhập?')) {
+                    window.location.href = '{{ route("login") }}';
+                }
+            @endauth
         }
 
         function changePage(direction) {

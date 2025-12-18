@@ -8,6 +8,20 @@ use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\AddressController;
+use App\Models\Ward;
+
+Route::get('/api/wards/{province}', function ($provinceId) {
+    return Ward::where('province_id', $provinceId)
+        ->orderBy('name')
+        ->get();
+});
+
+
+Route::middleware('auth')->group(function () {
+    Route::get('/addresses/create', [AddressController::class, 'create'])->name('addresses.create');
+    Route::post('/addresses', [AddressController::class, 'store'])->name('addresses.store');
+});
 
 
 Route::get('/', function () {
@@ -68,6 +82,11 @@ Route::middleware('auth')->group(function () {
 
 require __DIR__ . '/auth.php';
 
+// Include test routes in development
+if (app()->environment(['local', 'development'])) {
+    require __DIR__ . '/test.php';
+}
+
 // Google Auth
 Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle']);
 Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
@@ -89,6 +108,12 @@ Route::prefix('admin')->middleware('admin')->group(function () {
 });
 
 // Admin Orders & Products
+// Checkout routes
+Route::middleware('auth')->group(function () {
+    Route::get('/checkout', [App\Http\Controllers\CheckoutController::class, 'index'])->name('checkout');
+    Route::get('/checkout/payment', [App\Http\Controllers\CheckoutController::class, 'payment'])->name('checkout.payment');
+});
+
 // API Routes for user-facing website
 Route::prefix('api')->group(function () {
     Route::get('/products', [App\Http\Controllers\ProductPageController::class, 'apiIndex']);
@@ -101,6 +126,23 @@ Route::prefix('api')->group(function () {
     Route::post('/cart/update', [App\Http\Controllers\CartController::class, 'updateQuantity'])->middleware('web');
     Route::post('/cart/delete', [App\Http\Controllers\CartController::class, 'delete'])->middleware('web');
     Route::post('/cart/voucher', [App\Http\Controllers\CartController::class, 'applyVoucher'])->middleware('web');
+    
+    // Location APIs
+    Route::get('/provinces', [App\Http\Controllers\LocationController::class, 'getProvinces']);
+    Route::get('/provinces/{id}/wards', [App\Http\Controllers\LocationController::class, 'getWardsByProvince']);
+    Route::get('/provinces/{slug}/wards', [App\Http\Controllers\LocationController::class, 'getWardsByProvinceSlug']);
+    
+    // Address & Checkout APIs
+    Route::middleware('auth')->group(function () {
+        Route::get('/user/addresses', [App\Http\Controllers\AddressController::class, 'index']);
+        Route::post('/user/addresses', [App\Http\Controllers\AddressController::class, 'store']);
+        Route::put('/user/addresses/{id}', [App\Http\Controllers\AddressController::class, 'update']);
+        Route::delete('/user/addresses/{id}', [App\Http\Controllers\AddressController::class, 'destroy']);
+        Route::post('/user/addresses/{id}/default', [App\Http\Controllers\AddressController::class, 'setDefault']);
+        
+        Route::post('/checkout/set-address', [App\Http\Controllers\CheckoutController::class, 'setAddress']);
+        Route::post('/checkout/create-order', [App\Http\Controllers\CheckoutController::class, 'createOrder']);
+    });
 });
 
 Route::prefix('admin')->middleware('admin')->group(function () {

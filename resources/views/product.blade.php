@@ -563,10 +563,18 @@
                             btn.text(originalText).removeClass('bg-green-500');
                         }, 2000);
                     } else {
-                        alert('Có lỗi xảy ra, vui lòng thử lại!');
+                        console.error('Cart add error:', response);
+                        alert(response.message || 'Có lỗi xảy ra, vui lòng thử lại!');
                     }
-                }).fail(function() {
-                    alert('Có lỗi xảy ra, vui lòng thử lại!');
+                }).fail(function(xhr, status, error) {
+                    console.error('Cart add failed:', xhr.responseText, status, error);
+                    let errorMessage = 'Có lỗi xảy ra, vui lòng thử lại!';
+                    
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    
+                    alert(errorMessage);
                 });
             @else
                 // Show login popup or redirect

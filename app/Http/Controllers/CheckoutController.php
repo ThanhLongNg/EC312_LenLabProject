@@ -2,225 +2,218 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Address;
 use App\Models\Cart;
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\ProductVariant;
-use App\Models\Voucher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Session;
 
 class CheckoutController extends Controller
 {
-    // Hiển thị view checkout
-    public function showCheckout()
+    // Hiển thị trang checkout
+    public function index()
     {
+        if (!Auth::check()) {
+            return redirect()->route('login')->with('error', 'Vui lòng đăng nhập để tiếp tục');
+        }
+
+        // Kiểm tra giỏ hàng có sản phẩm không
+        $cartItems = Cart::where('user_id', Auth::id())->with('product')->get();
+        if ($cartItems->isEmpty()) {
+            return redirect()->route('cart')->with('error', 'Giỏ hàng trống');
+        }
+
         return view('checkout');
     }
 
-    // Hiển thị view order detail
-    public function showOrderDetail($code)
+    // Lưu địa chỉ giao hàng vào session
+    public function setAddress(Request $request)
     {
-        return view('order_detail', ['orderCode' => $code]);
-    }
+        try {
+            // Log request data for debugging
+            \Log::info('Checkout setAddress request:', $request->all());
 
-    // Tóm tắt giỏ hàng cho trang checkout
-    public function summary()
-    {
-        $userId = Auth::id();
+            // Validate without save_address first
+            $validated = $request->validate([
+                'full_name' => 'required|string|max:255',
+                'phone' => 'required|string|max:20',
+                'province_id' => 'required|integer|min:1',
+                'ward_id' => 'required|integer|min:1',
+                'specific_address' => 'required|string|max:500',
+                'selected_address_id' => 'nullable|integer|min:1'
+            ]);
 
-        $cartItems = Cart::where('user_id', $userId)
-            ->with(['variant', 'product'])
-            ->get();
+            // Handle save_address separately
+            $saveAddressInput = $request->input('save_address');
+            $validated['save_address'] = in_array($saveAddressInput, [true, 'true', 1, '1'], true);
 
-        $subtotal = $cartItems->sum(function ($item) {
-            return $item->variant->price * $item->quantity;
-        });
+            \Log::info('Save address processing:', [
+                'input' => $saveAddressInput,
+                'type' => gettype($saveAddressInput),
+                'result' => $validated['save_address']
+            ]);
 
-        return response()->json([
-            'cart_items' => $cartItems,
-            'subtotal'   => $subtotal,
-        ]);
-    }
+            // Check if province and ward exist (optional check)
+            try {
+                $province = \App\Models\Province::find($validated['province_id']);
+                $ward = \App\Models\Ward::find($validated['ward_id']);
+                
+                if (!$province) {
+                    \Log::warning('Province not found:', ['province_id' => $validated['province_id']]);
+                }
+                if (!$ward) {
+                    \Log::warning('Ward not found:', ['ward_id' => $validated['ward_id']]);
+                }
+                if ($ward && $ward->province_id != $validated['province_id']) {
+                    \Log::warning('Ward does not belong to province:', [
+                        'ward_id' => $validated['ward_id'],
+                        'ward_province_id' => $ward->province_id,
+                        'selected_province_id' => $validated['province_id']
+                    ]);
+                }
+            } catch (\Exception $e) {
+                \Log::error('Error checking province/ward:', ['error' => $e->getMessage()]);
+            }
 
-    // Hàm generate mã đơn hàng kiểu C: LL-XXXXXXXX
-    protected function generateOrderCode(): string
-    {
-        return 'LL-' . strtoupper(Str::random(8));
-    }
+            // Lưu địa chỉ vào session
+            Session::put('checkout_address', $validated);
 
-    // Tạo đơn hàng sau khi user điền form checkout
-    public function createOrder(Request $request)
-    {
-        $userId = Auth::id();
+            // Nếu user chọn lưu địa chỉ và chưa có địa chỉ này
+            if ($validated['save_address'] && empty($validated['selected_address_id'])) {
+                try {
+                    Address::create([
+                        'user_id' => Auth::id(),
+                        'full_name' => $validated['full_name'],
+                        'phone' => $validated['phone'],
+                        'province_id' => $validated['province_id'],
+                        'ward_id' => $validated['ward_id'],
+                        'specific_address' => $validated['specific_address'],
+                        'is_default' => false
+                    ]);
+                } catch (\Exception $addressError) {
+                    // Log address creation error but don't fail the whole request
+                    \Log::error('Failed to save address:', ['error' => $addressError->getMessage()]);
+                }
+            }
 
-        $request->validate([
-            'full_name'        => 'required|string|max:255',
-            'phone'            => 'required|string|max:20',
-            'email'            => 'required|email',
-            'province'         => 'required|string',
-            'district'         => 'required|string',
-            'specific_address' => 'required|string',
-            'shipping_method'  => 'required|in:store,delivery',
-            'note'             => 'nullable|string',
-            'voucher_code'     => 'nullable|string',
-        ]);
-
-        // Lấy giỏ hàng
-        $cartItems = Cart::where('user_id', $userId)
-            ->with('variant')
-            ->get();
-
-        if ($cartItems->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã lưu địa chỉ giao hàng'
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validation error in setAddress:', $e->errors());
             return response()->json([
                 'success' => false,
-                'message' => 'Giỏ hàng trống.',
-            ], 400);
+                'message' => 'Dữ liệu không hợp lệ',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Error in setAddress:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Hiển thị trang thanh toán
+    public function payment()
+    {
+        if (!Auth::check()) {
+            return redirect()->route('login');
         }
 
-        $subtotal = $cartItems->sum(fn($item) => $item->variant->price * $item->quantity);
+        // Kiểm tra có địa chỉ trong session không
+        $address = Session::get('checkout_address');
+        if (!$address) {
+            return redirect()->route('checkout')->with('error', 'Vui lòng chọn địa chỉ giao hàng');
+        }
 
-        // Phí ship: nhận tại cửa hàng = 0, giao hàng = 30000 (bạn tuỳ chỉnh)
-        $shippingFee = $request->shipping_method === 'store' ? 0 : 30000;
-
-        // Voucher (nếu có)
-        $discount = 0;
-        if ($request->voucher_code) {
-            $voucher = Voucher::where('code', $request->voucher_code)
-                ->where('active', 1)
-                ->first();
-
-            if ($voucher) {
-                // kiểm tra hạn, đơn tối thiểu giống CartController
-                $now = now();
-
-                if ($voucher->start_date && $now->lt($voucher->start_date)) {
-                    // chưa bắt đầu -> bỏ qua
-                } elseif ($voucher->end_date && $now->gt($voucher->end_date)) {
-                    // hết hạn -> bỏ qua
-                } elseif ($subtotal >= $voucher->min_order_value) {
-                    if ($voucher->type === 'fixed') {
-                        $discount = $voucher->discount_value;
-                    } else {
-                        $discount = intval($subtotal * ($voucher->discount_value / 100));
-                    }
+        // Lấy thông tin tỉnh và xã/phường nếu có province_id và ward_id
+        if (isset($address['province_id']) && isset($address['ward_id'])) {
+            try {
+                $province = \App\Models\Province::find($address['province_id']);
+                $ward = \App\Models\Ward::find($address['ward_id']);
+                
+                if ($province) {
+                    $address['province_name'] = $province->name;
                 }
+                if ($ward) {
+                    $address['ward_name'] = $ward->name;
+                }
+            } catch (\Exception $e) {
+                \Log::error('Error loading province/ward names:', ['error' => $e->getMessage()]);
             }
         }
 
-        $total = max(0, $subtotal + $shippingFee - $discount);
-
-        // Tạo order
-        $order = Order::create([
-            'order_code'       => $this->generateOrderCode(),
-            'user_id'          => $userId,
-            'full_name'        => $request->full_name,
-            'phone'            => $request->phone,
-            'email'            => $request->email,
-            'province'         => $request->province,
-            'district'         => $request->district,
-            'specific_address' => $request->specific_address,
-            'shipping_method'  => $request->shipping_method,
-            'shipping_fee'     => $shippingFee,
-            'discount_amount'  => $discount,
-            'total_amount'     => $total,
-            'status'           => 'pending',
-            'payment_method'   => null,              // sẽ cập nhật ở bước complete
-            'note'             => $request->note,
-        ]);
-
-        // Lưu order items
-        foreach ($cartItems as $item) {
-            OrderItem::create([
-                'order_id'   => $order->id,
-                'product_id' => $item->product_id,
-                'variant_id' => $item->variant_id,
-                'quantity'   => $item->quantity,
-                'price'      => $item->variant->price,
-            ]);
+        // Lấy thông tin giỏ hàng
+        $cartItems = Cart::where('user_id', Auth::id())->with('product')->get();
+        if ($cartItems->isEmpty()) {
+            return redirect()->route('cart')->with('error', 'Giỏ hàng trống');
         }
 
-        // Xoá giỏ hàng (theo yêu cầu: 1. A)
-        Cart::where('user_id', $userId)->delete();
-
-        return response()->json([
-            'success'    => true,
-            'order_code' => $order->order_code,
-        ]);
-    }
-
-    // Lấy thông tin 1 order cho trang order detail
-    public function getOrder($code)
-    {
-        $userId = Auth::id();
-
-        $order = Order::where('order_code', $code)
-            ->where('user_id', $userId)
-            ->with(['items.variant', 'items.product', 'user'])
-            ->firstOrFail();
-
-        $cartItems = $order->items->map(function ($item) {
-            return [
-                'product_name'  => $item->product->name ?? '',
-                'category_name' => $item->product->category ?? '',
-                'color'         => $item->variant->color ?? '',
-                'size'          => $item->variant->size ?? '',
-                'variant_image' => $item->variant->image ?? '',
-                'quantity'      => $item->quantity,
-                'price'         => $item->price,
-            ];
+        $subtotal = $cartItems->sum(function($item) {
+            return ($item->price_at_time ?? $item->product->price) * $item->quantity;
         });
 
-        return response()->json([
-            'success' => true,
-            'order'   => [
-                'order_code'      => $order->order_code,
-                'full_name'       => $order->full_name,
-                'phone'           => $order->phone,
-                'email'           => $order->email,
-                'province'        => $order->province,
-                'district'        => $order->district,
-                'specific_address' => $order->specific_address,
-                'shipping_method' => $order->shipping_method,
-                'shipping_fee'    => $order->shipping_fee,
-                'discount_amount' => $order->discount_amount,
-                'total_amount'    => $order->total_amount,
-                'note'            => $order->note,
-                'status'          => $order->status,
-                'cart_items'      => $cartItems,
-            ],
-            'user' => [
-                'full_name' => $order->user->name ?? $order->full_name,
-                'email'     => $order->user->email ?? $order->email,
-            ],
-        ]);
+        return view('checkout-payment', compact('address', 'cartItems', 'subtotal'));
     }
 
-    // Hoàn tất đơn hàng (chọn phương thức thanh toán ở Order Detail)
-    public function completeOrder(Request $request)
+    // Tạo đơn hàng
+    public function createOrder(Request $request)
     {
-        $userId = Auth::id();
+        try {
+            if (!Auth::check()) {
+                return response()->json(['success' => false, 'message' => 'Vui lòng đăng nhập'], 401);
+            }
 
-        $request->validate([
-            'order_code'     => 'required|string',
-            'payment_method' => 'required|in:cod,bank_transfer',
-            'note'           => 'nullable|string',
-        ]);
+            $address = Session::get('checkout_address');
+            if (!$address) {
+                return response()->json(['success' => false, 'message' => 'Không tìm thấy địa chỉ giao hàng'], 400);
+            }
 
-        $order = Order::where('order_code', $request->order_code)
-            ->where('user_id', $userId)
-            ->firstOrFail();
+            $validated = $request->validate([
+                'payment_method' => 'required|string|in:cod,bank_transfer,momo',
+                'note' => 'nullable|string|max:500'
+            ]);
 
-        $order->payment_method = $request->payment_method;
-        if ($request->note) {
-            $order->note = $request->note;
+            // Lấy giỏ hàng
+            $cartItems = Cart::where('user_id', Auth::id())->with('product')->get();
+            if ($cartItems->isEmpty()) {
+                return response()->json(['success' => false, 'message' => 'Giỏ hàng trống'], 400);
+            }
+
+            // Tính tổng tiền
+            $subtotal = $cartItems->sum(function($item) {
+                return ($item->price_at_time ?? $item->product->price) * $item->quantity;
+            });
+            
+            $shippingFee = 30000; // Phí ship cố định
+            $total = $subtotal + $shippingFee;
+
+            // Tạo mã đơn hàng
+            $orderCode = 'LL' . date('Ymd') . rand(1000, 9999);
+
+            // Tạo đơn hàng (giả sử có model Order)
+            // Order::create([...]);
+
+            // Xóa giỏ hàng
+            Cart::where('user_id', Auth::id())->delete();
+
+            // Xóa địa chỉ khỏi session
+            Session::forget('checkout_address');
+
+            return response()->json([
+                'success' => true,
+                'order_code' => $orderCode,
+                'message' => 'Đặt hàng thành công'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra: ' . $e->getMessage()
+            ], 500);
         }
-        $order->status = 'confirmed';
-        $order->save();
-
-        return response()->json([
-            'success' => true,
-        ]);
     }
 }

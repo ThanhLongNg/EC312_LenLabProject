@@ -14,13 +14,7 @@ use App\Http\Controllers\ProductPageController;
 
 Route::get('/products/{id}', [ProductPageController::class, 'getProduct']);
 
-use App\Http\Controllers\CartController;
-
-Route::get('/cart', [CartController::class, 'index']);
-Route::post('/cart/add', [CartController::class, 'add']);
-Route::post('/cart/update', [CartController::class, 'updateQuantity']);
-Route::post('/cart/delete', [CartController::class, 'delete']);
-Route::post('/cart/voucher', [CartController::class, 'applyVoucher']);
+// Cart routes moved to web.php to handle authentication properly
 
 use App\Http\Controllers\CheckoutController;
 
