@@ -17,7 +17,8 @@ class Cart extends Model
         'quantity',
         'price_at_time',
         'variant_info',
-        'session_id'
+        'session_id',
+         'variant_id'
     ];
 
     protected $casts = [
@@ -33,6 +34,10 @@ class Cart extends Model
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+    public function variant()
+    {
+        return $this->belongsTo(ProductVariant::class, 'variant_id'); 
     }
 
 

@@ -1,3 +1,4 @@
+<?php
 use App\Http\Controllers\IntroController;
 
 Route::get('/intro/products', [IntroController::class, 'getProducts']);

@@ -1,151 +1,74 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\CheckoutController;
+
+// ✅ ADMIN controllers
+use App\Http\Controllers\Admin\AuthController as AdminAuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\AddressController;
-use App\Models\Ward;
 
-Route::get('/api/wards/{province}', function ($provinceId) {
-    return Ward::where('province_id', $provinceId)
-        ->orderBy('name')
-        ->get();
-});
+// ✅ Site controllers
+use App\Http\Controllers\ProductPageController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\PostController;
+use App\Http\Controllers\ReviewController;
 
+// (Nếu có marketing controllers thì import thêm, ví dụ)
+// use App\Http\Controllers\Marketing\PostController as MarketingPostController;
+// use App\Http\Controllers\Marketing\BannerController as MarketingBannerController;
 
+Route::get('/', fn () => view('landingpage'));
+
+// ---------------- USER PAGES ----------------
+Route::get('/san-pham', [ProductPageController::class, 'index'])->name('products');
+Route::get('/san-pham/{id}', [ProductPageController::class, 'show'])->name('product.detail');
+
+Route::get('/gioi-thieu', fn () => view('intro'))->name('about');
+
+Route::get('/gio-hang', [CartController::class, 'show'])->name('cart');
+
+// Dashboard (user) -> redirect home
+Route::get('/dashboard', fn () => redirect('/'))
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
+
+// Profile
 Route::middleware('auth')->group(function () {
-    Route::get('/addresses/create', [AddressController::class, 'create'])->name('addresses.create');
-    Route::post('/addresses', [AddressController::class, 'store'])->name('addresses.store');
-});
-
-
-Route::get('/', function () {
-    return view('landingpage');
-});
-
-Route::get('/test-info', function () {
-    return view('test-info');
-})->name('test.info');
-
-Route::get('/debug-auth', function () {
-    return [
-        'authenticated' => Auth::check(),
-        'user' => Auth::user(),
-        'session_id' => session()->getId(),
-    ];
-});
-
-Route::get('/test-login', function () {
-    return view('test-login');
-})->name('test.login');
-
-
-
-// Routes cho user
-Route::get('/san-pham', function () {
-    return view('products');
-})->name('products');
-Route::get('/san-pham/{id}', [App\Http\Controllers\ProductPageController::class, 'show'])->name('product.detail');
-
-Route::get('/gioi-thieu', function () {
-    return view('intro');
-})->name('about');
-
-Route::get('/gio-hang', [App\Http\Controllers\CartController::class, 'show'])->name('cart');
-
-Route::get('/dashboard', function () {
-    // Redirect user về trang chủ thay vì dashboard
-    return redirect('/');
-})->middleware(['auth', 'verified'])->name('dashboard');
-
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', function () {
-        try {
-            $user = Auth::user();
-            if (!$user) {
-                return redirect()->route('login')->with('error', 'Vui lòng đăng nhập');
-            }
-            return view('profile', compact('user'));
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
-    })->name('profile');
-    
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__ . '/auth.php';
-
-// Include test routes in development
-if (app()->environment(['local', 'development'])) {
-    require __DIR__ . '/test.php';
-}
+require __DIR__.'/auth.php';
 
 // Google Auth
 Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle']);
 Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
 
-// Admin logout
-Route::post('/admin/logout', [App\Http\Controllers\Admin\AuthController::class, 'logout'])->name('admin.logout');
+// ---------------- ADMIN AUTH ----------------
+// ✅ không để trong group admin middleware
+Route::get('/admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
+Route::post('/admin/login', [AdminAuthController::class, 'login'])->name('admin.login.post');
+Route::post('/admin/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
 
-// Admin Dashboard
-Route::middleware(['admin'])->prefix('admin')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
-});
-
-// Admin Customers
+// ---------------- ADMIN AREA ----------------
 Route::prefix('admin')->middleware('admin')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+
+    // Customers
     Route::get('/customers', [CustomerController::class, 'index'])->name('admin.customers.index');
     Route::get('/customers/create', [CustomerController::class, 'create'])->name('admin.customers.create');
     Route::post('/customers', [CustomerController::class, 'store'])->name('admin.customers.store');
     Route::delete('/customers/{id}', [CustomerController::class, 'destroy'])->name('admin.customers.destroy');
-});
 
-// Admin Orders & Products
-// Checkout routes
-Route::middleware('auth')->group(function () {
-    Route::get('/checkout', [App\Http\Controllers\CheckoutController::class, 'index'])->name('checkout');
-    Route::get('/checkout/payment', [App\Http\Controllers\CheckoutController::class, 'payment'])->name('checkout.payment');
-});
-
-// API Routes for user-facing website
-Route::prefix('api')->group(function () {
-    Route::get('/products', [App\Http\Controllers\ProductPageController::class, 'apiIndex']);
-    Route::get('/products/{id}/variants', [App\Http\Controllers\ProductPageController::class, 'getVariants']);
-    Route::get('/landing/products', [App\Http\Controllers\ProductPageController::class, 'landingProducts']);
-    Route::get('/categories', [App\Http\Controllers\CategoryController::class, 'apiIndex']);
-    Route::get('/categories/{id}/products', [App\Http\Controllers\CategoryController::class, 'getProductsByCategory']);
-    Route::get('/cart', [App\Http\Controllers\CartController::class, 'index']);
-    Route::post('/cart/add', [App\Http\Controllers\CartController::class, 'add'])->middleware('web');
-    Route::post('/cart/update', [App\Http\Controllers\CartController::class, 'updateQuantity'])->middleware('web');
-    Route::post('/cart/delete', [App\Http\Controllers\CartController::class, 'delete'])->middleware('web');
-    Route::post('/cart/voucher', [App\Http\Controllers\CartController::class, 'applyVoucher'])->middleware('web');
-    
-    // Location APIs
-    Route::get('/provinces', [App\Http\Controllers\LocationController::class, 'getProvinces']);
-    Route::get('/provinces/{id}/wards', [App\Http\Controllers\LocationController::class, 'getWardsByProvince']);
-    Route::get('/provinces/{slug}/wards', [App\Http\Controllers\LocationController::class, 'getWardsByProvinceSlug']);
-    
-    // Address & Checkout APIs
-    Route::middleware('auth')->group(function () {
-        Route::get('/user/addresses', [App\Http\Controllers\AddressController::class, 'index']);
-        Route::post('/user/addresses', [App\Http\Controllers\AddressController::class, 'store']);
-        Route::put('/user/addresses/{id}', [App\Http\Controllers\AddressController::class, 'update']);
-        Route::delete('/user/addresses/{id}', [App\Http\Controllers\AddressController::class, 'destroy']);
-        Route::post('/user/addresses/{id}/default', [App\Http\Controllers\AddressController::class, 'setDefault']);
-        
-        Route::post('/checkout/set-address', [App\Http\Controllers\CheckoutController::class, 'setAddress']);
-        Route::post('/checkout/create-order', [App\Http\Controllers\CheckoutController::class, 'createOrder']);
-    });
-});
-
-Route::prefix('admin')->middleware('admin')->group(function () {
     // Orders
     Route::get('/orders', [OrderController::class, 'index'])->name('admin.orders.index');
     Route::get('/orders/list', [OrderController::class, 'list'])->name('admin.orders.list');
@@ -154,8 +77,8 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('admin.orders.show');
     Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('admin.orders.delete');
     Route::delete('/orders', [OrderController::class, 'bulkDelete'])->name('admin.orders.bulkDelete');
-    Route::get('/products/{id}/price', [OrderController::class, 'productPrice'])->name('admin.product.price');
     Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('admin.orders.updateStatus');
+    Route::get('/products/{id}/price', [OrderController::class, 'productPrice'])->name('admin.product.price');
 
     // Products
     Route::get('/products', [ProductController::class, 'index'])->name('admin.products.index');
@@ -165,4 +88,48 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     Route::get('/products/{id}/edit', [ProductController::class, 'edit'])->name('admin.products.edit');
     Route::put('/products/{id}', [ProductController::class, 'update'])->name('admin.products.update');
     Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('admin.products.destroy');
+});
+
+// ---------------- MARKETING AREA ----------------
+// Nếu bạn đã fix middleware admin.role rồi thì mở lại
+Route::prefix('marketing')->middleware(['admin', 'admin.role:marketing'])->group(function () {
+    Route::get('/dashboard', fn () => 'MARKETING DASHBOARD')->name('marketing.dashboard');
+    // Route::resource('/posts', MarketingPostController::class)->names('marketing.posts');
+    // Route::resource('/banners', MarketingBannerController::class)->names('marketing.banners');
+});
+
+// Public post detail
+Route::get('/bai-viet/{id}', [PostController::class, 'show'])->name('post.show');
+
+// ---------------- API (USER SITE) ----------------
+Route::prefix('api')->group(function () {
+    Route::get('/products', [ProductPageController::class, 'apiIndex']);
+    Route::get('/landing/products', [ProductPageController::class, 'landingProducts']);
+    Route::get('/products/{id}/variants', [ProductPageController::class, 'getVariants']);
+
+    Route::get('/categories', [CategoryController::class, 'apiIndex']);
+    Route::get('/categories/{id}/products', [CategoryController::class, 'getProductsByCategory']);
+
+    Route::get('/cart', [CartController::class, 'index']);
+    Route::post('/cart/add', [CartController::class, 'add'])->middleware('web');
+    Route::post('/cart/update', [CartController::class, 'updateQuantity'])->middleware('web');
+    Route::post('/cart/delete', [CartController::class, 'delete'])->middleware('web');
+    Route::post('/cart/voucher', [CartController::class, 'applyVoucher'])->middleware('web');
+
+    // Reviews
+    Route::get('/reviews/{product_id}', [ReviewController::class, 'getReviews']);
+    Route::post('/reviews', [ReviewController::class, 'submitReview'])->middleware('auth:api');
+    Route::get('/products/related', [ReviewController::class, 'getRelatedProducts']);
+});
+
+// ---------------- CHECKOUT ----------------
+Route::get('/checkout', [CheckoutController::class, 'showCheckout'])->middleware('auth');
+Route::post('/checkout/save-draft', [CheckoutController::class, 'saveDraft'])->middleware('auth');
+Route::get('/order/{code}', [CheckoutController::class, 'showOrderDetail'])->name('order.detail')->middleware('auth');
+
+Route::prefix('api')->middleware('auth')->group(function () {
+    Route::get('/checkout/summary', [CheckoutController::class, 'summary']);
+    Route::post('/checkout/create', [CheckoutController::class, 'createOrder']);
+    Route::get('/order/{code}', [CheckoutController::class, 'getOrder']);
+    Route::post('/order/complete', [CheckoutController::class, 'completeOrder']);
 });
