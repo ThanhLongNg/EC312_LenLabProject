@@ -8,6 +8,13 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
+    // GET /admin/login
+    public function showLogin()
+    {
+        return view('admin.auth.login');
+    }
+
+    // POST /admin/login
     public function login(Request $request)
     {
         $credentials = $request->validate([
@@ -17,7 +24,12 @@ class AuthController extends Controller
 
         if (Auth::guard('admin')->attempt($credentials)) {
             $request->session()->regenerate();
-            return redirect()->intended('/admin/dashboard');
+
+            $role = Auth::guard('admin')->user()->role; // admin / marketing
+
+            return $role === 'marketing'
+                ? redirect()->route('marketing.dashboard')
+                : redirect()->route('admin.dashboard');
         }
 
         return back()->withErrors([
@@ -30,6 +42,6 @@ class AuthController extends Controller
         Auth::guard('admin')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        return redirect('/admin/login');
+        return redirect()->route('admin.login');
     }
 }

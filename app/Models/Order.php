@@ -8,7 +8,9 @@ class Order extends Model
 {
     public $timestamps = false; // Tắt timestamps vì bảng không có created_at, updated_at
     protected $table = 'orders';
-
+    protected $primaryKey = 'order_id';
+    public $incrementing = false;
+    protected $keyType = 'string';
     protected $fillable = [
         'order_id',
         'order_code',

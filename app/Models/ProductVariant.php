@@ -7,13 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class ProductVariant extends Model
 {
     protected $table = 'product_variants';
-    public $timestamps = false;
-    
+
     protected $fillable = [
-        'product_id',
-        'variant_name',
-        'image',
-        'price'
+        'product_id', 'color', 'size', 'price', 'image', 'stock'
     ];
 
     public function product()
