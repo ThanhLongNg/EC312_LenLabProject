@@ -19,8 +19,22 @@ Route::get('/api/wards/{province}', function ($provinceId) {
 
 
 Route::middleware('auth')->group(function () {
-    Route::get('/addresses/create', [AddressController::class, 'create'])->name('addresses.create');
-    Route::post('/addresses', [AddressController::class, 'store'])->name('addresses.store');
+    Route::get('/addresses', function() {
+        return view('addresses');
+    })->name('addresses.index');
+    Route::get('/addresses/create', function() {
+        return view('address-form');
+    })->name('addresses.create');
+    Route::get('/addresses/{id}/edit', function($id) {
+        $address = \App\Models\Address::where('user_id', Auth::id())->findOrFail($id);
+        return view('address-form', compact('address'));
+    })->name('addresses.edit');
+    
+    // Profile edit routes
+    Route::get('/profile/edit', function() {
+        return view('profile-edit');
+    })->name('profile.edit');
+    Route::post('/profile/update', [App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
 });
 
 
@@ -31,6 +45,122 @@ Route::get('/', function () {
 Route::get('/test-info', function () {
     return view('test-info');
 })->name('test.info');
+
+Route::get('/debug-vouchers', function () {
+    $vouchers = \App\Models\Voucher::all(); // Lấy tất cả voucher, không filter
+    
+    $result = [
+        'total_vouchers' => $vouchers->count(),
+        'all_vouchers_raw' => $vouchers->map(function($voucher) {
+            return [
+                'id' => $voucher->id,
+                'code' => $voucher->code,
+                'type' => $voucher->type,
+                'discount_value' => $voucher->discount_value,
+                'min_order_value' => $voucher->min_order_value,
+                'start_date' => $voucher->start_date ? $voucher->start_date->format('Y-m-d H:i:s') : null,
+                'end_date' => $voucher->end_date ? $voucher->end_date->format('Y-m-d H:i:s') : null,
+                'active' => $voucher->active,
+                'expired' => $voucher->end_date ? \Carbon\Carbon::now()->gt($voucher->end_date) : false
+            ];
+        }),
+        'active_vouchers' => \App\Models\Voucher::where('active', true)->get()->map(function($voucher) {
+            return [
+                'code' => $voucher->code,
+                'type' => $voucher->type,
+                'discount_value' => $voucher->discount_value,
+                'min_order_value' => $voucher->min_order_value,
+                'active' => $voucher->active,
+                'expired' => $voucher->end_date ? \Carbon\Carbon::now()->gt($voucher->end_date) : false
+            ];
+        }),
+        'valid_for_300k' => \App\Models\Voucher::where('active', true)
+            ->where('start_date', '<=', \Carbon\Carbon::now())
+            ->where('end_date', '>', \Carbon\Carbon::now())
+            ->where(function($query) {
+                $query->whereNull('min_order_value')
+                       ->orWhere('min_order_value', '<=', 300000);
+            })
+            ->get()
+            ->map(function($voucher) {
+                return [
+                    'code' => $voucher->code,
+                    'discount_value' => $voucher->discount_value,
+                    'type' => $voucher->type,
+                    'min_order_value' => $voucher->min_order_value
+                ];
+            })
+    ];
+    
+    return response()->json($result);
+});
+
+Route::get('/test-voucher-apply', function() {
+    $testCode = request('code', 'SUMMER20');
+    $cartTotal = request('total', 300000);
+    
+    try {
+        $voucher = \App\Models\Voucher::where('code', $testCode)
+                             ->where('active', true)
+                             ->where('start_date', '<=', \Carbon\Carbon::now())
+                             ->where('end_date', '>', \Carbon\Carbon::now())
+                             ->first();
+        
+        if (!$voucher) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Voucher không tồn tại hoặc đã hết hạn',
+                'debug' => [
+                    'code' => $testCode,
+                    'now' => \Carbon\Carbon::now()->format('Y-m-d H:i:s'),
+                    'all_vouchers_with_code' => \App\Models\Voucher::where('code', $testCode)->get()->map(function($v) {
+                        return [
+                            'code' => $v->code,
+                            'active' => $v->active,
+                            'start_date' => $v->start_date ? $v->start_date->format('Y-m-d H:i:s') : null,
+                            'end_date' => $v->end_date ? $v->end_date->format('Y-m-d H:i:s') : null,
+                        ];
+                    })
+                ]
+            ]);
+        }
+        
+        // Check minimum order value
+        $canApply = true;
+        $reason = '';
+        
+        if ($voucher->min_order_value && $cartTotal < $voucher->min_order_value) {
+            $canApply = false;
+            $reason = 'Đơn hàng tối thiểu ' . number_format($voucher->min_order_value) . 'đ';
+        }
+        
+        return response()->json([
+            'success' => $canApply,
+            'message' => $canApply ? 'Có thể áp dụng voucher' : $reason,
+            'voucher' => [
+                'code' => $voucher->code,
+                'type' => $voucher->type,
+                'discount_value' => $voucher->discount_value,
+                'min_order_value' => $voucher->min_order_value,
+                'start_date' => $voucher->start_date ? $voucher->start_date->format('Y-m-d H:i:s') : null,
+                'end_date' => $voucher->end_date ? $voucher->end_date->format('Y-m-d H:i:s') : null,
+                'active' => $voucher->active
+            ],
+            'cart_total' => $cartTotal,
+            'can_apply' => $canApply
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Lỗi: ' . $e->getMessage(),
+            'debug' => [
+                'code' => $testCode,
+                'total' => $cartTotal
+            ]
+        ]);
+    }
+});
 
 Route::get('/debug-auth', function () {
     return [
@@ -56,7 +186,9 @@ Route::get('/gioi-thieu', function () {
     return view('intro');
 })->name('about');
 
-Route::get('/gio-hang', [App\Http\Controllers\CartController::class, 'show'])->name('cart');
+Route::get('/vouchers', [App\Http\Controllers\VoucherController::class, 'index'])->name('vouchers');
+
+Route::get('/cart', [App\Http\Controllers\CartController::class, 'show'])->name('cart');
 
 Route::get('/dashboard', function () {
     // Redirect user về trang chủ thay vì dashboard
@@ -111,7 +243,22 @@ Route::prefix('admin')->middleware('admin')->group(function () {
 // Checkout routes
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', [App\Http\Controllers\CheckoutController::class, 'index'])->name('checkout');
+    Route::get('/checkout/confirm', [App\Http\Controllers\CheckoutController::class, 'confirm'])->name('checkout.confirm');
     Route::get('/checkout/payment', [App\Http\Controllers\CheckoutController::class, 'payment'])->name('checkout.payment');
+    Route::get('/checkout/bank-transfer', [App\Http\Controllers\CheckoutController::class, 'bankTransfer'])->name('checkout.bank-transfer');
+    Route::get('/order-success', [App\Http\Controllers\CheckoutController::class, 'orderSuccess'])->name('order.success');
+});
+
+// Policy page
+Route::get('/chinh-sach', function () {
+    return view('policy');
+})->name('policy');
+
+// Order detail routes
+Route::middleware('auth')->group(function () {
+    Route::get('/orders', [App\Http\Controllers\OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{orderId}', [App\Http\Controllers\OrderController::class, 'show'])->name('order.detail');
+    Route::post('/orders/{orderId}/cancel', [App\Http\Controllers\OrderController::class, 'cancel'])->name('order.cancel');
 });
 
 // API Routes for user-facing website
@@ -127,10 +274,31 @@ Route::prefix('api')->group(function () {
     Route::post('/cart/delete', [App\Http\Controllers\CartController::class, 'delete'])->middleware('web');
     Route::post('/cart/voucher', [App\Http\Controllers\CartController::class, 'applyVoucher'])->middleware('web');
     
+    // Voucher APIs
+    Route::get('/vouchers', [App\Http\Controllers\VoucherController::class, 'getVouchers']);
+    Route::post('/vouchers/apply', [App\Http\Controllers\VoucherController::class, 'applyVoucher'])->middleware('web');
+    Route::post('/vouchers/remove', [App\Http\Controllers\VoucherController::class, 'removeVoucher'])->middleware('web');
+    
     // Location APIs
     Route::get('/provinces', [App\Http\Controllers\LocationController::class, 'getProvinces']);
     Route::get('/provinces/{id}/wards', [App\Http\Controllers\LocationController::class, 'getWardsByProvince']);
     Route::get('/provinces/{slug}/wards', [App\Http\Controllers\LocationController::class, 'getWardsByProvinceSlug']);
+    Route::get('/shipping-fee/{provinceId}', function($provinceId) {
+        $province = \App\Models\Province::find($provinceId);
+        if (!$province) {
+            return response()->json(['success' => false, 'message' => 'Tỉnh không tồn tại']);
+        }
+        
+        $shippingFee = \App\Helpers\ShippingHelper::calculateShippingFee($province->name);
+        $zone = \App\Helpers\ShippingHelper::getZone($province->name);
+        
+        return response()->json([
+            'success' => true,
+            'shipping_fee' => $shippingFee,
+            'zone' => $zone,
+            'province_name' => $province->name
+        ]);
+    });
     
     // Address & Checkout APIs
     Route::middleware('auth')->group(function () {
@@ -140,7 +308,12 @@ Route::prefix('api')->group(function () {
         Route::delete('/user/addresses/{id}', [App\Http\Controllers\AddressController::class, 'destroy']);
         Route::post('/user/addresses/{id}/default', [App\Http\Controllers\AddressController::class, 'setDefault']);
         
+        Route::post('/checkout/set-selected-items', [App\Http\Controllers\CheckoutController::class, 'setSelectedItems']);
         Route::post('/checkout/set-address', [App\Http\Controllers\CheckoutController::class, 'setAddress']);
+        Route::post('/checkout/set-note', [App\Http\Controllers\CheckoutController::class, 'setNote']);
+        Route::post('/checkout/set-payment-method', [App\Http\Controllers\CheckoutController::class, 'setPaymentMethod']);
+        Route::post('/checkout/prepare-bank-transfer', [App\Http\Controllers\CheckoutController::class, 'prepareBankTransfer']);
+        Route::post('/checkout/complete-bank-transfer', [App\Http\Controllers\CheckoutController::class, 'completeBankTransfer']);
         Route::post('/checkout/create-order', [App\Http\Controllers\CheckoutController::class, 'createOrder']);
     });
 });

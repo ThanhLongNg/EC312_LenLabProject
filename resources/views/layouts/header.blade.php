@@ -43,7 +43,7 @@
             </div>
 
             <!-- Cart -->
-            <div class="cart-icon" onclick="window.location.href='/gio-hang'">
+            <div class="cart-icon" onclick="window.location.href='/cart'">
                 <i class="fas fa-shopping-cart"></i>
                 <span class="cart-count" id="cartCount">0</span>
             </div>

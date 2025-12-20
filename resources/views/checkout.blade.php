@@ -262,7 +262,7 @@
     <div class="checkout-container">
         <!-- Header -->
         <div class="flex items-center justify-between p-4">
-            <button onclick="window.history.back()" class="text-white hover:text-primary transition-colors">
+            <button onclick="window.location.href='/cart'" class="text-white hover:text-primary transition-colors">
                 <span class="material-symbols-outlined text-2xl">arrow_back</span>
             </button>
             <h1 class="text-white font-semibold text-lg">Địa chỉ giao hàng</h1>
@@ -343,8 +343,6 @@
                     </div>
                 </div>
 
-
-
                 <div class="mb-6">
                     <label class="block text-white text-sm font-medium mb-2">Địa chỉ cụ thể</label>
                     <textarea name="specific_address" class="form-input" rows="3" placeholder="Số nhà, tên đường, tòa nhà" required
@@ -399,7 +397,7 @@
 
         $(document).ready(function() {
             loadProvinces();
-            loadUserAddresses();
+            // Không tự động load địa chỉ nữa
             setupProvinceChange();
             
             // Pre-fill user info if logged in
@@ -414,8 +412,7 @@
                 $.get('/api/user/addresses', function(response) {
                     if (response.success && response.addresses.length > 0) {
                         userAddresses = response.addresses;
-                        // Auto select first address
-                        selectAddress(userAddresses[0]);
+                        // Không tự động chọn địa chỉ đầu tiên nữa
                     }
                 }).fail(function() {
                     console.log('No saved addresses found');
@@ -446,11 +443,23 @@
         }
 
         function showAddressList() {
+            // Load addresses when user clicks "Chọn"
             if (userAddresses.length === 0) {
-                alert('Chưa có địa chỉ đã lưu');
-                return;
+                loadUserAddresses();
+                // Wait a bit for addresses to load
+                setTimeout(() => {
+                    if (userAddresses.length === 0) {
+                        alert('Chưa có địa chỉ đã lưu');
+                        return;
+                    }
+                    showAddressModal();
+                }, 500);
+            } else {
+                showAddressModal();
             }
-            
+        }
+
+        function showAddressModal() {
             let html = '';
             userAddresses.forEach(address => {
                 html += `
@@ -648,7 +657,7 @@
 
             $.post('/api/checkout/set-address', addressData, function(response) {
                 if (response.success) {
-                    window.location.href = '/checkout/payment';
+                    window.location.href = '/checkout/confirm';
                 } else {
                     console.error('Server error:', response);
                     alert('Có lỗi xảy ra: ' + response.message);

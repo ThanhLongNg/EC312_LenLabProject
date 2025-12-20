@@ -14,6 +14,7 @@ class Address extends Model
         'ward_id',
         'specific_address',
         'is_default',
+        'detail', // Keep old field for backward compatibility
     ];
 
     protected $casts = [
