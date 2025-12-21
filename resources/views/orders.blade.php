@@ -121,7 +121,7 @@
                             $itemCount = $order->orderItems->count();
                         @endphp
                         
-                        @if($firstItem)
+                        @if($firstItem && $firstItem->product_name)
                         <img src="{{ $firstItem->product_image && $firstItem->product_image !== 'default.jpg' ? '/PRODUCT-IMG/' . $firstItem->product_image : 'https://via.placeholder.com/50x50/FAC638/FFFFFF?text=' . urlencode(substr($firstItem->product_name, 0, 2)) }}" 
                              alt="{{ $firstItem->product_name }}" 
                              class="w-12 h-12 object-cover rounded-lg"
@@ -139,8 +139,8 @@
                             <span class="material-symbols-outlined text-gray-400">inventory_2</span>
                         </div>
                         <div class="flex-1">
-                            <p class="text-white text-sm font-medium">Đơn hàng trống</p>
-                            <p class="text-gray-400 text-xs">0 sản phẩm</p>
+                            <p class="text-white text-sm font-medium">Đơn hàng #{{ $order->order_id }}</p>
+                            <p class="text-gray-400 text-xs">{{ $itemCount }} sản phẩm</p>
                         </div>
                         @endif
                         
@@ -148,7 +148,7 @@
                     </div>
                     
                     <div class="flex items-center justify-between text-xs text-gray-400">
-                        <span>{{ $order->created_at->format('d/m/Y') }}</span>
+                        <span>{{ date('d/m/Y') }}</span>
                         <div class="flex items-center gap-1">
                             <span>Xem chi tiết</span>
                             <span class="material-symbols-outlined text-xs">chevron_right</span>

@@ -249,7 +249,7 @@
                 <h3 class="text-white font-semibold text-lg mb-4">Sản phẩm ({{ count($order['items']) }})</h3>
                 
                 @foreach($order['items'] as $item)
-                <div class="product-item">
+                <div class="product-item cursor-pointer hover:bg-gray-700/30 transition-colors rounded-lg" onclick="viewProduct({{ $item['product_id'] }})">
                     <img src="/PRODUCT-IMG/{{ $item['image'] ?? 'default.jpg' }}" 
                          alt="{{ $item['name'] }}" 
                          class="w-15 h-15 object-cover rounded-lg flex-shrink-0"
@@ -260,7 +260,10 @@
                         <p class="text-gray-400 text-xs mb-2">{{ $item['variant'] }}</p>
                         <p class="text-gray-400 text-xs">SL: {{ $item['quantity'] }}</p>
                     </div>
-                    <p class="text-primary font-bold text-sm">{{ number_format($item['price']) }}đ</p>
+                    <div class="flex items-center gap-2">
+                        <p class="text-primary font-bold text-sm">{{ number_format($item['price']) }}đ</p>
+                        <span class="material-symbols-outlined text-gray-400 text-sm">chevron_right</span>
+                    </div>
                 </div>
                 @endforeach
             </div>
@@ -402,6 +405,33 @@
     </div>
 
     <script>
+        // Check if returning from product detail
+        function checkReturnFromProduct() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const returnFrom = urlParams.get('return_from');
+            
+            if (returnFrom === 'product') {
+                // Clean the URL without refreshing the page
+                const cleanUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+                
+                // Optional: Show a brief message or highlight
+                console.log('Returned from product detail');
+            }
+        }
+        
+        // Navigate to product detail with return URL
+        function viewProduct(productId) {
+            const currentUrl = window.location.pathname;
+            const returnUrl = encodeURIComponent(currentUrl + '?return_from=product');
+            window.location.href = `/san-pham/${productId}?return=${returnUrl}`;
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkReturnFromProduct();
+        });
+        
         function showCancelModal() {
             document.getElementById('cancelModal').classList.remove('hidden');
             document.body.style.overflow = 'hidden';

@@ -212,27 +212,28 @@
                     <span class="text-white text-sm">{{ number_format($shippingFee) }}đ</span>
                 </div>
                 
+                @if(isset($deliveryTime))
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-sm">Thời gian giao hàng</span>
+                    <span class="text-primary text-sm">{{ $deliveryTime }}</span>
+                </div>
+                @endif
+                
                 @php
-                    // Get voucher discount from session
-                    $appliedVoucher = Session::get('applied_voucher');
-                    $discountAmount = 0;
-                    
-                    if ($appliedVoucher) {
-                        if ($appliedVoucher['type'] === 'percent') {
-                            $discountAmount = ($subtotal * $appliedVoucher['discount_value']) / 100;
-                        } else {
-                            $discountAmount = $appliedVoucher['discount_value'];
-                        }
-                    }
-                    
-                    $finalTotal = $subtotal + $shippingFee - $discountAmount;
+                    // Calculate final total
+                    $finalTotal = $subtotal + $shippingFee - ($voucherDiscount ?? 0);
                 @endphp
                 
-                @if($discountAmount > 0)
+                @if(isset($voucherDiscount) && $voucherDiscount > 0)
                 <div class="flex justify-between items-center">
                     <span class="text-gray-400 text-sm">Giảm giá</span>
-                    <span class="text-green-400 text-sm">-{{ number_format($discountAmount) }}đ</span>
+                    <span class="text-green-400 text-sm">-{{ number_format($voucherDiscount) }}đ</span>
                 </div>
+                @if(isset($voucherCode))
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 text-xs">Mã: {{ $voucherCode }}</span>
+                </div>
+                @endif
                 @endif
                 
                 <hr class="border-gray-700 my-2">

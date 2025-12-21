@@ -361,6 +361,13 @@
         </div>
     </div>
 
+    <!-- Fixed Bottom Button -->
+    <div class="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-[400px] bg-background-dark border-t border-gray-700 p-4">
+        <button onclick="proceedToPayment()" class="checkout-btn w-full py-4 rounded-2xl text-background-dark font-bold text-lg">
+            Tiếp tục
+        </button>
+    </div>
+
     <!-- Address List Modal -->
     <div id="addressListModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden">
         <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-[400px] bg-background-dark rounded-t-3xl">
@@ -454,17 +461,15 @@
 
         function showAddressModal() {
             let html = '';
-            list.forEach(item => {
+            userAddresses.forEach(address => {
                 html += `
-                <div class="ck-cart-item">
-                    <img src="/product-img/${item.variant.image}" class="ck-cart-img">
-                    <div class="ck-cart-info">
-                        <h4>${item.product.name}</h4>
-                        <p>Phân loại: ${item.variant.variant_name || ''}</p>
-                        <p>Số lượng: ${item.quantity}</p>
-                    </div>
-                    <div class="ck-cart-price">
-                        ${formatPrice(item.variant.price * item.quantity)}
+                <div class="address-card cursor-pointer" onclick="selectAddressFromList(${address.id})">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <p class="text-white font-medium mb-1">${address.full_name}</p>
+                            <p class="text-gray-300 text-sm mb-2">${address.phone}</p>
+                            <p class="text-gray-300 text-sm">${address.specific_address}, ${address.ward?.name || ''}, ${address.province?.name || ''}</p>
+                        </div>
                     </div>
                 </div>
             `;
@@ -563,6 +568,27 @@
                 $('#wardButton').prop('disabled', true);
                 $('#wardValue').val('');
                 $('#wardText').text('Chọn Xã/Phường');
+            });
+
+            // Load shipping fee for selected province
+            loadShippingFee(provinceId);
+        }
+
+        function loadShippingFee(provinceId) {
+            if (!provinceId) return;
+            
+            $.get(`/api/shipping-fee/${provinceId}`, function(response) {
+                if (response.success) {
+                    // Display shipping fee and delivery time (if you want to show it on checkout page)
+                    console.log('Shipping fee:', response.shipping_fee);
+                    console.log('Delivery zone:', response.zone);
+                    console.log('Province:', response.province_name);
+                    
+                    // You can add UI elements to show this info if needed
+                    // For example: $('#shippingInfo').html(`Phí ship: ${response.shipping_fee.toLocaleString()}đ`);
+                }
+            }).fail(function() {
+                console.error('Failed to load shipping fee');
             });
         }
 

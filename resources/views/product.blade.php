@@ -204,7 +204,7 @@
     <div class="product-container">
         <!-- Header -->
         <div class="flex items-center justify-between p-4 border-b border-gray-700">
-            <button onclick="window.location.href='/san-pham'" class="text-white hover:text-primary transition-colors">
+            <button onclick="goBack()" class="text-white hover:text-primary transition-colors">
                 <span class="material-symbols-outlined text-2xl">arrow_back</span>
             </button>
             <h1 class="text-white font-semibold text-lg">Chi tiết sản phẩm</h1>
@@ -347,6 +347,20 @@
     </div>
 
     <script>
+        // Handle back navigation with return URL support
+        function goBack() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const returnUrl = urlParams.get('return');
+            
+            if (returnUrl) {
+                // Decode the return URL and navigate back
+                window.location.href = decodeURIComponent(returnUrl);
+            } else {
+                // Default back to products page
+                window.location.href = '/san-pham';
+            }
+        }
+        
         let currentQuantity = 1;
         let selectedVariant = null;
         let productVariants = [];

@@ -370,9 +370,12 @@
         }
 
         function viewOrderDetail() {
-            // For now, redirect to profile or orders page
-            // In a real app, this would go to order detail page
-            alert('Tính năng xem chi tiết đơn hàng sẽ được cập nhật sớm!');
+            const orderCode = '{{ $orderCode ?? "" }}';
+            if (orderCode) {
+                window.location.href = `/orders/${orderCode}`;
+            } else {
+                alert('Không tìm thấy mã đơn hàng!');
+            }
         }
 
         // Add confetti animation CSS

@@ -16,13 +16,18 @@ class OrderController extends Controller
             return redirect()->route('login');
         }
 
-        // Get user's orders from database
-        $orders = \App\Models\Order::where('user_id', Auth::id())
-                                  ->with(['orderItems'])
-                                  ->orderBy('created_at', 'desc')
-                                  ->get();
+        try {
+            // Get user's orders from database - simplified version
+            $orders = \App\Models\Order::where('user_id', Auth::id())
+                                      ->with('orderItems') // Load order items relationship
+                                      ->orderBy('order_id', 'desc')
+                                      ->get();
 
-        return view('orders', compact('orders'));
+            return view('orders', compact('orders'));
+        } catch (\Exception $e) {
+            \Log::error('Error loading orders:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return view('orders', ['orders' => collect()]);
+        }
     }
     /**
      * Display order details
@@ -48,9 +53,10 @@ class OrderController extends Controller
             'id' => $order->order_id, // Sử dụng order_id làm mã đơn hàng
             'status' => $order->status,
             'status_text' => $order->status_text,
-            'created_at' => $order->created_at->format('d/m/Y'),
+            'created_at' => date('d/m/Y'), // Sử dụng ngày hiện tại vì không có timestamps
             'items' => $order->orderItems->map(function($item) {
                 return [
+                    'product_id' => $item->product_id,
                     'name' => $item->product_name,
                     'variant' => $this->formatVariantInfo($item->variant_info),
                     'quantity' => $item->quantity,

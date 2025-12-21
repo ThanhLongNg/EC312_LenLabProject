@@ -209,7 +209,7 @@
                         <span class="text-white">{{ number_format($shippingFee) }}đ</span>
                     </div>
                     
-                    @if($discountAmount > 0)
+                    @if(isset($discountAmount) && $discountAmount > 0)
                         <div class="flex justify-between items-center">
                             <span class="text-gray-300">Giảm giá</span>
                             <span class="text-red-400">-{{ number_format($discountAmount) }}đ</span>
