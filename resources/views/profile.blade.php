@@ -93,7 +93,6 @@
             </div>
             
             <h2 class="text-white text-xl font-semibold mb-1">{{ Auth::user()->name }}</h2>
-            <p class="text-primary text-sm font-medium mb-1">Thành viên thân thiết</p>
             <p class="text-gray-400 text-sm">{{ Auth::user()->email }}</p>
         </div>
 

@@ -359,13 +359,6 @@
                 </div>
             </form>
         </div>
-
-        <!-- Fixed Bottom Button -->
-        <div class="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-[400px] bg-background-dark/95 backdrop-blur-md border-t border-gray-700 p-4">
-            <button onclick="proceedToPayment()" class="checkout-btn w-full py-4 rounded-2xl text-background-dark font-bold text-lg">
-                Tiếp tục
-            </button>
-        </div>
     </div>
 
     <!-- Address List Modal -->
@@ -461,14 +454,20 @@
 
         function showAddressModal() {
             let html = '';
-            userAddresses.forEach(address => {
+            list.forEach(item => {
                 html += `
-                    <div class="address-card cursor-pointer" onclick="selectAddressFromList(${address.id})">
-                        <p class="text-white font-medium mb-1">${address.full_name}</p>
-                        <p class="text-gray-300 text-sm mb-1">${address.phone}</p>
-                        <p class="text-gray-300 text-sm">${address.full_address || (address.specific_address + ', ' + (address.ward?.name || '') + ', ' + (address.province?.name || ''))}</p>
+                <div class="ck-cart-item">
+                    <img src="/product-img/${item.variant.image}" class="ck-cart-img">
+                    <div class="ck-cart-info">
+                        <h4>${item.product.name}</h4>
+                        <p>Phân loại: ${item.variant.variant_name || ''}</p>
+                        <p>Số lượng: ${item.quantity}</p>
                     </div>
-                `;
+                    <div class="ck-cart-price">
+                        ${formatPrice(item.variant.price * item.quantity)}
+                    </div>
+                </div>
+            `;
             });
             
             $('#addressList').html(html);

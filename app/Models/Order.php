@@ -8,16 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 class Order extends Model
 {
     use HasFactory;
-
-    // Specify the primary key
+    public $timestamps = false; // Tắt timestamps vì bảng không có created_at, updated_at
+    protected $table = 'orders';
     protected $primaryKey = 'order_id';
-    
-    // Indicate that the primary key is not auto-incrementing
     public $incrementing = false;
-    
-    // Specify the primary key type
     protected $keyType = 'string';
-
     protected $fillable = [
         'order_id',
         'user_id',

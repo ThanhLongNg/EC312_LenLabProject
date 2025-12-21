@@ -40,11 +40,20 @@
             min-height: 100vh;
         }
     </style>
+
+    {{-- ✅ nơi nhận @push('styles') từ các view con --}}
+    @stack('styles')
 </head>
 
 <body class="bg-background-dark min-h-screen">
     <div class="min-h-screen">
         @yield('content')
     </div>
+
+    {{-- ✅ jQuery (vì checkout đang dùng $, $.get, $.ajax) --}}
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    {{-- ✅ nơi nhận @push('scripts') từ các view con --}}
+    @stack('scripts')
 </body>
 </html>

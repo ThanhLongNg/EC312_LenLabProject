@@ -1,24 +1,57 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\CheckoutController;
+
+// ✅ ADMIN controllers
+use App\Http\Controllers\Admin\AuthController as AdminAuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\AddressController;
-use App\Models\Ward;
 
-Route::get('/api/wards/{province}', function ($provinceId) {
-    return Ward::where('province_id', $provinceId)
-        ->orderBy('name')
-        ->get();
-});
+// ✅ Site controllers
+use App\Http\Controllers\ProductPageController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\PostController;
+use App\Http\Controllers\ReviewController;
 
+Route::get('/', fn () => view('landingpage'));
 
+// ---------------- USER PAGES ----------------
+Route::get('/san-pham', [ProductPageController::class, 'index'])->name('products');
+Route::get('/san-pham/{id}', [ProductPageController::class, 'show'])->name('product.detail');
+
+Route::get('/gioi-thieu', fn () => view('intro'))->name('about');
+
+Route::get('/cart', [CartController::class, 'show'])->name('cart');
+
+Route::get('/vouchers', [App\Http\Controllers\VoucherController::class, 'index'])->name('vouchers');
+
+// Dashboard (user) -> redirect home
+Route::get('/dashboard', fn () => redirect('/'))
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
+
+// Profile
 Route::middleware('auth')->group(function () {
+    Route::get('/profile', function () {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return redirect()->route('login')->with('error', 'Vui lòng đăng nhập');
+            }
+            return view('profile', compact('user'));
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    })->name('profile');
+    
     Route::get('/addresses', function() {
         return view('addresses');
     })->name('addresses.index');
@@ -35,211 +68,58 @@ Route::middleware('auth')->group(function () {
         return view('profile-edit');
     })->name('profile.edit');
     Route::post('/profile/update', [App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
-});
-
-
-Route::get('/', function () {
-    return view('landingpage');
-});
-
-Route::get('/test-info', function () {
-    return view('test-info');
-})->name('test.info');
-
-Route::get('/debug-vouchers', function () {
-    $vouchers = \App\Models\Voucher::all(); // Lấy tất cả voucher, không filter
-    
-    $result = [
-        'total_vouchers' => $vouchers->count(),
-        'all_vouchers_raw' => $vouchers->map(function($voucher) {
-            return [
-                'id' => $voucher->id,
-                'code' => $voucher->code,
-                'type' => $voucher->type,
-                'discount_value' => $voucher->discount_value,
-                'min_order_value' => $voucher->min_order_value,
-                'start_date' => $voucher->start_date ? $voucher->start_date->format('Y-m-d H:i:s') : null,
-                'end_date' => $voucher->end_date ? $voucher->end_date->format('Y-m-d H:i:s') : null,
-                'active' => $voucher->active,
-                'expired' => $voucher->end_date ? \Carbon\Carbon::now()->gt($voucher->end_date) : false
-            ];
-        }),
-        'active_vouchers' => \App\Models\Voucher::where('active', true)->get()->map(function($voucher) {
-            return [
-                'code' => $voucher->code,
-                'type' => $voucher->type,
-                'discount_value' => $voucher->discount_value,
-                'min_order_value' => $voucher->min_order_value,
-                'active' => $voucher->active,
-                'expired' => $voucher->end_date ? \Carbon\Carbon::now()->gt($voucher->end_date) : false
-            ];
-        }),
-        'valid_for_300k' => \App\Models\Voucher::where('active', true)
-            ->where('start_date', '<=', \Carbon\Carbon::now())
-            ->where('end_date', '>', \Carbon\Carbon::now())
-            ->where(function($query) {
-                $query->whereNull('min_order_value')
-                       ->orWhere('min_order_value', '<=', 300000);
-            })
-            ->get()
-            ->map(function($voucher) {
-                return [
-                    'code' => $voucher->code,
-                    'discount_value' => $voucher->discount_value,
-                    'type' => $voucher->type,
-                    'min_order_value' => $voucher->min_order_value
-                ];
-            })
-    ];
-    
-    return response()->json($result);
-});
-
-Route::get('/test-voucher-apply', function() {
-    $testCode = request('code', 'SUMMER20');
-    $cartTotal = request('total', 300000);
-    
-    try {
-        $voucher = \App\Models\Voucher::where('code', $testCode)
-                             ->where('active', true)
-                             ->where('start_date', '<=', \Carbon\Carbon::now())
-                             ->where('end_date', '>', \Carbon\Carbon::now())
-                             ->first();
-        
-        if (!$voucher) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Voucher không tồn tại hoặc đã hết hạn',
-                'debug' => [
-                    'code' => $testCode,
-                    'now' => \Carbon\Carbon::now()->format('Y-m-d H:i:s'),
-                    'all_vouchers_with_code' => \App\Models\Voucher::where('code', $testCode)->get()->map(function($v) {
-                        return [
-                            'code' => $v->code,
-                            'active' => $v->active,
-                            'start_date' => $v->start_date ? $v->start_date->format('Y-m-d H:i:s') : null,
-                            'end_date' => $v->end_date ? $v->end_date->format('Y-m-d H:i:s') : null,
-                        ];
-                    })
-                ]
-            ]);
-        }
-        
-        // Check minimum order value
-        $canApply = true;
-        $reason = '';
-        
-        if ($voucher->min_order_value && $cartTotal < $voucher->min_order_value) {
-            $canApply = false;
-            $reason = 'Đơn hàng tối thiểu ' . number_format($voucher->min_order_value) . 'đ';
-        }
-        
-        return response()->json([
-            'success' => $canApply,
-            'message' => $canApply ? 'Có thể áp dụng voucher' : $reason,
-            'voucher' => [
-                'code' => $voucher->code,
-                'type' => $voucher->type,
-                'discount_value' => $voucher->discount_value,
-                'min_order_value' => $voucher->min_order_value,
-                'start_date' => $voucher->start_date ? $voucher->start_date->format('Y-m-d H:i:s') : null,
-                'end_date' => $voucher->end_date ? $voucher->end_date->format('Y-m-d H:i:s') : null,
-                'active' => $voucher->active
-            ],
-            'cart_total' => $cartTotal,
-            'can_apply' => $canApply
-        ]);
-        
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Lỗi: ' . $e->getMessage(),
-            'debug' => [
-                'code' => $testCode,
-                'total' => $cartTotal
-            ]
-        ]);
-    }
-});
-
-Route::get('/debug-auth', function () {
-    return [
-        'authenticated' => Auth::check(),
-        'user' => Auth::user(),
-        'session_id' => session()->getId(),
-    ];
-});
-
-Route::get('/test-login', function () {
-    return view('test-login');
-})->name('test.login');
-
-
-
-// Routes cho user
-Route::get('/san-pham', function () {
-    return view('products');
-})->name('products');
-Route::get('/san-pham/{id}', [App\Http\Controllers\ProductPageController::class, 'show'])->name('product.detail');
-
-Route::get('/gioi-thieu', function () {
-    return view('intro');
-})->name('about');
-
-Route::get('/vouchers', [App\Http\Controllers\VoucherController::class, 'index'])->name('vouchers');
-
-Route::get('/cart', [App\Http\Controllers\CartController::class, 'show'])->name('cart');
-
-Route::get('/dashboard', function () {
-    // Redirect user về trang chủ thay vì dashboard
-    return redirect('/');
-})->middleware(['auth', 'verified'])->name('dashboard');
-
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', function () {
-        try {
-            $user = Auth::user();
-            if (!$user) {
-                return redirect()->route('login')->with('error', 'Vui lòng đăng nhập');
-            }
-            return view('profile', compact('user'));
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
-    })->name('profile');
     
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__ . '/auth.php';
-
-// Include test routes in development
-if (app()->environment(['local', 'development'])) {
-    require __DIR__ . '/test.php';
-}
+require __DIR__.'/auth.php';
 
 // Google Auth
 Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle']);
 Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
 
-// Admin logout
-Route::post('/admin/logout', [App\Http\Controllers\Admin\AuthController::class, 'logout'])->name('admin.logout');
+// ---------------- ADMIN AUTH ----------------
+Route::get('/admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
+Route::post('/admin/login', [AdminAuthController::class, 'login'])->name('admin.login.post');
+Route::post('/admin/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
 
-// Admin Dashboard
-Route::middleware(['admin'])->prefix('admin')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
-});
-
-// Admin Customers
+// ---------------- ADMIN AREA ----------------
 Route::prefix('admin')->middleware('admin')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+
+    // Customers
     Route::get('/customers', [CustomerController::class, 'index'])->name('admin.customers.index');
     Route::get('/customers/create', [CustomerController::class, 'create'])->name('admin.customers.create');
     Route::post('/customers', [CustomerController::class, 'store'])->name('admin.customers.store');
     Route::delete('/customers/{id}', [CustomerController::class, 'destroy'])->name('admin.customers.destroy');
+
+    // Orders
+    Route::get('/orders', [OrderController::class, 'index'])->name('admin.orders.index');
+    Route::get('/orders/list', [OrderController::class, 'list'])->name('admin.orders.list');
+    Route::get('/orders/create', [OrderController::class, 'create'])->name('admin.orders.create');
+    Route::post('/orders', [OrderController::class, 'store'])->name('admin.orders.store');
+    Route::get('/orders/{id}', [OrderController::class, 'show'])->name('admin.orders.show');
+    Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('admin.orders.delete');
+    Route::delete('/orders', [OrderController::class, 'bulkDelete'])->name('admin.orders.bulkDelete');
+    Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('admin.orders.updateStatus');
+    Route::get('/products/{id}/price', [OrderController::class, 'productPrice'])->name('admin.product.price');
+
+    // Products
+    Route::get('/products', [ProductController::class, 'index'])->name('admin.products.index');
+    Route::get('/products/list', [ProductController::class, 'list'])->name('admin.products.list');
+    Route::get('/products/create', [ProductController::class, 'create'])->name('admin.products.create');
+    Route::post('/products', [ProductController::class, 'store'])->name('admin.products.store');
+    Route::get('/products/{id}/edit', [ProductController::class, 'edit'])->name('admin.products.edit');
+    Route::put('/products/{id}', [ProductController::class, 'update'])->name('admin.products.update');
+    Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('admin.products.destroy');
 });
 
-// Admin Orders & Products
+// ---------------- MARKETING AREA ----------------
+Route::prefix('marketing')->middleware(['admin', 'admin.role:marketing'])->group(function () {
+    Route::get('/dashboard', fn () => 'MARKETING DASHBOARD')->name('marketing.dashboard');
+});
+
 // Checkout routes
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', [App\Http\Controllers\CheckoutController::class, 'index'])->name('checkout');
@@ -260,6 +140,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/orders/{orderId}', [App\Http\Controllers\OrderController::class, 'show'])->name('order.detail');
     Route::post('/orders/{orderId}/cancel', [App\Http\Controllers\OrderController::class, 'cancel'])->name('order.cancel');
 });
+
+// Public post detail
+Route::get('/bai-viet/{id}', [PostController::class, 'show'])->name('post.show');
 
 // API Routes for user-facing website
 Route::prefix('api')->group(function () {
@@ -316,26 +199,9 @@ Route::prefix('api')->group(function () {
         Route::post('/checkout/complete-bank-transfer', [App\Http\Controllers\CheckoutController::class, 'completeBankTransfer']);
         Route::post('/checkout/create-order', [App\Http\Controllers\CheckoutController::class, 'createOrder']);
     });
-});
 
-Route::prefix('admin')->middleware('admin')->group(function () {
-    // Orders
-    Route::get('/orders', [OrderController::class, 'index'])->name('admin.orders.index');
-    Route::get('/orders/list', [OrderController::class, 'list'])->name('admin.orders.list');
-    Route::get('/orders/create', [OrderController::class, 'create'])->name('admin.orders.create');
-    Route::post('/orders', [OrderController::class, 'store'])->name('admin.orders.store');
-    Route::get('/orders/{id}', [OrderController::class, 'show'])->name('admin.orders.show');
-    Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('admin.orders.delete');
-    Route::delete('/orders', [OrderController::class, 'bulkDelete'])->name('admin.orders.bulkDelete');
-    Route::get('/products/{id}/price', [OrderController::class, 'productPrice'])->name('admin.product.price');
-    Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('admin.orders.updateStatus');
-
-    // Products
-    Route::get('/products', [ProductController::class, 'index'])->name('admin.products.index');
-    Route::get('/products/list', [ProductController::class, 'list'])->name('admin.products.list');
-    Route::get('/products/create', [ProductController::class, 'create'])->name('admin.products.create');
-    Route::post('/products', [ProductController::class, 'store'])->name('admin.products.store');
-    Route::get('/products/{id}/edit', [ProductController::class, 'edit'])->name('admin.products.edit');
-    Route::put('/products/{id}', [ProductController::class, 'update'])->name('admin.products.update');
-    Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('admin.products.destroy');
+    // Reviews
+    Route::get('/reviews/{product_id}', [ReviewController::class, 'getReviews']);
+    Route::post('/reviews', [ReviewController::class, 'submitReview'])->middleware('auth:api');
+    Route::get('/products/related', [ReviewController::class, 'getRelatedProducts']);
 });
