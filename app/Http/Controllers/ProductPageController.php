@@ -11,7 +11,7 @@ class ProductPageController extends Controller
     // Trang danh sách sản phẩm
     public function index(Request $request)
     {
-        $query = Product::query();
+        $query = Product::active(); // Chỉ lấy sản phẩm active
         
         // Lọc theo danh mục
         if ($request->has('type')) {
@@ -43,7 +43,7 @@ class ProductPageController extends Controller
     public function apiIndex(Request $request)
     {
         try {
-            $query = Product::query();
+            $query = Product::active(); // Chỉ lấy sản phẩm active
             
             // Filter theo category
             if ($request->has('category') && $request->category !== 'all') {
@@ -127,7 +127,8 @@ class ProductPageController extends Controller
     public function landingProducts()
     {
         try {
-            $products = Product::where('status', 1)
+            $products = Product::active() // Chỉ lấy sản phẩm active
+                ->where('status', 1)
                 ->orderBy('id', 'desc')
                 ->take(8)
                 ->get()
@@ -178,7 +179,7 @@ class ProductPageController extends Controller
     // Chi tiết sản phẩm
     public function show($id)
     {
-        $product = Product::with('variants')->findOrFail($id);
+        $product = Product::active()->with('variants')->findOrFail($id); // Chỉ cho phép xem sản phẩm active
         
         // Lấy thông tin variants
         $availableVariants = $product->getAvailableVariants();

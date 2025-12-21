@@ -19,12 +19,26 @@ class Product extends Model
         'category_id',
         'color',
         'size',
-        'new'
+        'new',
+        'is_active'
     ];
 
     protected $casts = [
-        'images' => 'array'
+        'images' => 'array',
+        'is_active' => 'boolean'
     ];
+
+    // Scope để lấy sản phẩm active
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    // Scope để lấy sản phẩm inactive
+    public function scopeInactive($query)
+    {
+        return $query->where('is_active', false);
+    }
 
     public function variants()
     {

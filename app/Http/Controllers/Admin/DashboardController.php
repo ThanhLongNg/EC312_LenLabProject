@@ -29,19 +29,6 @@ class DashboardController extends Controller
             }
         }
 
-        // Lấy đơn hàng gần nhất
-        $recentOrders = [];
-        if (\Schema::hasTable('orders')) {
-            try {
-                $recentOrders = \DB::table('orders')
-                    ->orderBy('created_at', 'desc')
-                    ->limit(5)
-                    ->get();
-            } catch (\Exception $e) {
-                $recentOrders = [];
-            }
-        }
-
         return view('admin.dashboard_modern', [
             'customerCount' => $customerCount,
             'productCount' => $productCount,
