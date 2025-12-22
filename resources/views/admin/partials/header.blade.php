@@ -75,17 +75,36 @@
 
             document.addEventListener('change', (e) => {
                 const t = e.target;
-                if (t && (t.classList.contains('rowChk') || t.id === 'checkAll')) updateBulkBtn();
+
+                if (t && t.id === 'checkAll') {
+                    document.querySelectorAll('.rowChk').forEach(cb => cb.checked = t.checked);
+                    updateBulkBtn();
+                    return;
+                }
+
+                if (t && t.classList.contains('rowChk')) {
+                    const all = document.querySelectorAll('.rowChk');
+                    const checked = document.querySelectorAll('.rowChk:checked');
+                    const checkAll = document.getElementById('checkAll');
+                    if (checkAll) checkAll.checked = (all.length > 0 && checked.length === all.length);
+                    updateBulkBtn();
+                }
             });
 
             btn?.addEventListener('click', () => {
                 const form = document.getElementById('bulkDeleteForm');
                 if (!form) return alert('Không tìm thấy form bulkDeleteForm');
-                const ok = confirm('Bạn có chắc chắn muốn xóa các mục đã chọn không?');
-                if (ok) form.submit();
+
+                const checked = document.querySelectorAll('.rowChk:checked').length;
+                if (checked === 0) return;
+
+                window.LenlabConfirmDelete?.open({
+                    title: 'Xác nhận xóa',
+                    desc: `Bạn có chắc chắn muốn xóa ${checked} mục đã chọn? Hành động này không thể hoàn tác.`,
+                    onOk: () => form.submit()
+                });
             });
 
-            // initial
             updateBulkBtn();
         })();
     </script>

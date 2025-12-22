@@ -122,6 +122,21 @@
                 transform: translateX(0);
             }
         }
+
+        /* ✅ FIX: Sidebar không gạch chân link */
+        aside a,
+        aside a:hover,
+        aside a:focus,
+        aside a:active,
+        aside a:visited {
+            text-decoration: none !important;
+        }
+
+        /* Nếu có class "underline" / "text-decoration-underline" bị bootstrap/tailwind gắn */
+        aside a.underline,
+        aside a.text-decoration-underline {
+            text-decoration: none !important;
+        }
     </style>
 
     @stack('styles')
@@ -214,6 +229,124 @@
 
         // CSRF Token for AJAX
         window.csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    </script>
+
+    {{-- Delete Confirm Modal (Global) --}}
+    <div id="deleteModal" class="fixed inset-0 z-[9999] hidden">
+        {{-- overlay --}}
+        <div class="absolute inset-0 bg-black/40"></div>
+
+        {{-- modal --}}
+        <div class="relative flex min-h-full items-center justify-center p-4">
+            <div class="w-full max-w-lg rounded-2xl bg-white dark:bg-surface-dark shadow-xl border border-border-light dark:border-border-dark">
+                <div class="p-6 flex gap-4">
+                    <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                        <span class="material-icons-round text-red-600">warning</span>
+                    </div>
+
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white" id="deleteModalTitle">
+                            Xác nhận xóa
+                        </h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-300" id="deleteModalDesc">
+                            Bạn có chắc chắn muốn xóa? Hành động này không thể hoàn tác.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="px-6 pb-6 flex justify-end gap-3">
+                    <button type="button" id="btnDeleteCancel"
+                        class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5">
+                        Hủy
+                    </button>
+                    <button type="button" id="btnDeleteConfirm"
+                        class="px-4 py-2 rounded-lg bg-danger text-white hover:bg-red-600">
+                        Xác nhận xóa
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        const modal = document.getElementById('deleteModal');
+        const btnCancel = document.getElementById('btnDeleteCancel');
+        const btnConfirm = document.getElementById('btnDeleteConfirm');
+        const titleEl = document.getElementById('deleteModalTitle');
+        const descEl = document.getElementById('deleteModalDesc');
+
+        let onConfirm = null;
+
+        function openModal({ title, desc, onOk }) {
+            if (titleEl) titleEl.textContent = title || 'Xác nhận xóa';
+            if (descEl) descEl.textContent = desc || 'Bạn có chắc chắn muốn xóa? Hành động này không thể hoàn tác.';
+            onConfirm = onOk || null;
+            modal?.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            modal?.classList.add('hidden');
+            onConfirm = null;
+        }
+
+        // click overlay to close
+        modal?.addEventListener('click', (e) => {
+            if (e.target === modal.firstElementChild) closeModal();
+        });
+
+        btnCancel?.addEventListener('click', closeModal);
+
+        btnConfirm?.addEventListener('click', () => {
+            if (typeof onConfirm === 'function') onConfirm();
+            closeModal();
+        });
+
+        window.LenlabConfirmDelete = { open: openModal, close: closeModal };
+    })();
+    </script>
+
+    {{-- Transfer Image Modal --}}
+    <div id="transferImgModal" class="fixed inset-0 z-[9999] hidden">
+      <div class="absolute inset-0 bg-black/50"></div>
+      <div class="relative flex min-h-full items-center justify-center p-4">
+        <div class="w-full max-w-3xl rounded-2xl bg-white dark:bg-surface-dark border border-border-light dark:border-border-dark overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-border-light dark:border-border-dark">
+            <div class="font-semibold">Minh chứng chuyển khoản</div>
+            <button type="button" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5" id="btnCloseTransferImg">
+              <span class="material-icons-round">close</span>
+            </button>
+          </div>
+          <div class="p-4">
+            <img id="transferImgPreview" src="" alt="Transfer"
+                 class="w-full max-h-[70vh] object-contain rounded-xl border border-border-light dark:border-border-dark">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+    (function(){
+      const modal = document.getElementById('transferImgModal');
+      const img = document.getElementById('transferImgPreview');
+      const btnClose = document.getElementById('btnCloseTransferImg');
+
+      function open(url){
+        if (img) img.src = url;
+        modal?.classList.remove('hidden');
+      }
+      function close(){
+        modal?.classList.add('hidden');
+        if (img) img.src = '';
+      }
+
+      modal?.addEventListener('click', (e) => {
+        if (e.target === modal.firstElementChild) close();
+      });
+      btnClose?.addEventListener('click', close);
+
+      window.openTransferImage = open;
+    })();
     </script>
 
     @stack('scripts')

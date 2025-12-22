@@ -12,61 +12,39 @@ class ProductController extends Controller
 {
     // 💚 1) Trang danh sách sản phẩm với search + filter + paginate
     public function index(Request $request)
-    {
-        $query = Product::with('variants');
+{
+    $query = Product::query()->with('variants');
 
-        // Search by name
-        if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
-
-        // Filter by category
-        if ($request->filled('category') && $request->category !== 'all') {
-            $query->where('category_id', $request->category);
-        }
-
-        // Filter by status
-        if ($request->filled('status') && $request->status !== 'all') {
-            $query->where('status', $request->status);
-        }
-
-        // Filter by is_active
-        if ($request->filled('is_active') && $request->is_active !== 'all') {
-            $query->where('is_active', $request->is_active == '1');
-        }
-
-        // Filter by new products
-        if ($request->filled('new') && $request->new !== 'all') {
-            $query->where('new', $request->new == '1');
-        }
-
-        // Sorting
-        $sortBy = $request->get('sort_by', 'id');
-        $sortOrder = $request->get('sort_order', 'desc');
-        
-        $allowedSorts = ['id', 'name', 'price', 'quantity', 'created_at'];
-        if (in_array($sortBy, $allowedSorts)) {
-            $query->orderBy($sortBy, $sortOrder);
-        } else {
-            $query->orderBy('id', 'desc');
-        }
-
-        // Pagination
-        $perPage = $request->get('per_page', 15);
-        $products = $query->paginate($perPage)->withQueryString();
-
-        // Categories for filter dropdown
-        $categories = [
-            1 => 'Nguyên phụ liệu',
-            2 => 'Đồ trang trí',
-            3 => 'Thời trang len',
-            4 => 'Combo tự làm',
-            5 => 'Sách hướng dẫn',
-            6 => 'Thú bông len'
-        ];
-
-        return view('admin.products.index_simple', compact('products', 'categories'));
+    // 🔍 SEARCH theo tên
+    if ($request->filled('keyword')) {
+        $query->where('name', 'like', '%' . $request->keyword . '%');
     }
+
+    // 🗂 FILTER theo danh mục
+    if ($request->filled('category_id')) {
+        $query->where('category_id', $request->category_id);
+    }
+
+    // 🔘 FILTER theo trạng thái
+    if ($request->filled('is_active')) {
+        $query->where('is_active', $request->is_active);
+    }
+
+    // 📄 PAGINATION + giữ query
+    $products = $query->paginate(10)->appends($request->all());
+
+    $categories = [
+        1 => 'Nguyên phụ liệu',
+        2 => 'Đồ trang trí',
+        3 => 'Thời trang len',
+        4 => 'Combo tự làm',
+        5 => 'Sách hướng dẫn',
+        6 => 'Thú bông len',
+    ];
+
+    return view('admin.products.index_simple', compact('products', 'categories'));
+}
+
 
     // 💚 API load danh sách với search + filter + paginate
     public function list(Request $request)
