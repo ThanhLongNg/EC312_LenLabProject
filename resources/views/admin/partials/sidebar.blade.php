@@ -173,7 +173,7 @@
                 <ul class="space-y-1 pl-11 mt-1">
                     <li>
                         <a class="block px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
-                           href="#">
+                           href="{{ route('admin.posts.index') }}">
                             Bài viết &amp; Banners
                         </a>
                     </li>
