@@ -11,6 +11,7 @@ class DigitalProductPurchase extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'digital_product_id',
         'customer_email',
         'customer_name',
@@ -20,7 +21,8 @@ class DigitalProductPurchase extends Model
         'expires_at',
         'downloads_count',
         'email_sent',
-        'download_history'
+        'download_history',
+        'transfer_image'
     ];
 
     protected $casts = [
@@ -34,6 +36,11 @@ class DigitalProductPurchase extends Model
     public function digitalProduct()
     {
         return $this->belongsTo(DigitalProduct::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function isExpired()
