@@ -81,9 +81,12 @@ class CartController extends Controller
             return response()->json(['success' => false, 'message' => 'Vui lòng đăng nhập'], 401);
         }
 
+        // Log request data for debugging
+        \Log::info('Cart add request:', $request->all());
+
         $request->validate([
             'product_id' => 'required|integer|exists:products,id',
-            'variant_id' => 'nullable|integer|exists:product_variants,id',
+            'variant_id' => 'nullable|integer',
             'variant_name' => 'nullable|string',
             'quantity'   => 'required|integer|min:1',
         ]);
@@ -94,28 +97,48 @@ class CartController extends Controller
         $variantName = $request->variant_name;
         $quantity = (int)$request->quantity;
 
+        \Log::info('Cart add processing:', [
+            'user_id' => $userId,
+            'product_id' => $productId,
+            'variant_id' => $variantId,
+            'variant_name' => $variantName,
+            'quantity' => $quantity
+        ]);
+
         // Nếu có variant_id, lấy thông tin variant
         $variant = null;
         $price = null;
         $variantInfo = null;
 
         if ($variantId) {
-            $variant = ProductVariant::findOrFail($variantId);
+            // Check if variant exists (without strict validation to allow flexibility)
+            $variant = ProductVariant::find($variantId);
             
-            // Đảm bảo variant thuộc product_id
-            if ((int)$variant->product_id !== (int)$productId) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Variant không thuộc sản phẩm này'
-                ], 422);
+            if ($variant) {
+                // Đảm bảo variant thuộc product_id
+                if ((int)$variant->product_id !== (int)$productId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Variant không thuộc sản phẩm này'
+                    ], 422);
+                }
+                
+                $price = $variant->price;
+                $variantInfo = [
+                    'color' => $variant->color ?? null,
+                    'size'  => $variant->size ?? null,
+                    'image' => $variant->image ?? null,
+                ];
+            } else {
+                // If variant doesn't exist in product_variants table, still save variant_id
+                // This allows for custom variants that might not be in the variants table
+                $product = \App\Models\Product::findOrFail($productId);
+                $price = $product->price;
+                
+                if ($variantName) {
+                    $variantInfo = ['variant_name' => $variantName];
+                }
             }
-            
-            $price = $variant->price;
-            $variantInfo = [
-                'color' => $variant->color ?? null,
-                'size'  => $variant->size ?? null,
-                'image' => $variant->image ?? null,
-            ];
         } else {
             // Không có variant, lấy giá từ sản phẩm chính
             $product = \App\Models\Product::findOrFail($productId);
@@ -149,15 +172,32 @@ class CartController extends Controller
                 $item->variant_info = $variantInfo;
             }
             $item->save();
+            
+            \Log::info('Cart item updated:', [
+                'cart_id' => $item->id,
+                'variant_id' => $item->variant_id,
+                'variant_info' => $item->variant_info
+            ]);
         } else {
             // Tạo mới
-            Cart::create([
+            $cartData = [
                 'user_id' => $userId,
                 'product_id' => $productId,
                 'variant_id' => $variantId,
                 'quantity' => $quantity,
                 'price_at_time' => $price,
                 'variant_info' => $variantInfo,
+            ];
+            
+            \Log::info('Creating new cart item:', $cartData);
+            
+            $newItem = Cart::create($cartData);
+            
+            \Log::info('Cart item created:', [
+                'cart_id' => $newItem->id,
+                'variant_id' => $newItem->variant_id,
+                'variant_info' => $newItem->variant_info,
+                'saved_data' => $newItem->toArray()
             ]);
         }
 

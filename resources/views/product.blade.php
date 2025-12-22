@@ -255,13 +255,13 @@
                 <h2 class="text-white text-xl font-bold mb-2">{{ $product->name }}</h2>
                 <div class="flex items-center gap-2 mb-3">
                     <div class="rating-stars flex">
-                        <span class="material-symbols-outlined text-sm">star</span>
-                        <span class="material-symbols-outlined text-sm">star</span>
-                        <span class="material-symbols-outlined text-sm">star</span>
-                        <span class="material-symbols-outlined text-sm">star</span>
-                        <span class="material-symbols-outlined text-sm">star_half</span>
+                        @for($i = 1; $i <= 5; $i++)
+                            <span class="material-symbols-outlined text-sm">
+                                {{ $i <= floor($averageRating) ? 'star' : ($i == ceil($averageRating) && $averageRating - floor($averageRating) >= 0.5 ? 'star_half' : 'star_border') }}
+                            </span>
+                        @endfor
                     </div>
-                    <span class="text-primary font-semibold">4.8</span>
+                    <span class="text-primary font-semibold">{{ number_format($averageRating, 1) }}</span>
                 </div>
                 <p class="text-primary text-2xl font-bold">{{ number_format($product->price ?? 0) }}đ</p>
                 <p class="text-green-400 text-sm mt-1">Còn hàng</p>
@@ -273,8 +273,12 @@
                 <p class="text-white font-medium mb-3">Lựa chọn</p>
                 <div class="grid grid-cols-2 gap-2">
                     @foreach($availableVariants as $index => $variant)
+                        @php
+                            $variantWithId = $variantsWithId->firstWhere('variant_name', $variant);
+                        @endphp
                         <button class="variant-option py-3 px-4 border {{ $index === 0 ? 'border-primary bg-primary/10 text-primary' : 'border-gray-600 text-white hover:border-primary' }} rounded-lg transition-colors text-sm"
-                                data-variant="{{ $variant }}">
+                                data-variant="{{ $variant }}"
+                                data-variant-id="{{ $variantWithId ? $variantWithId->id : '' }}">
                             {{ $variant }}
                         </button>
                     @endforeach
@@ -287,29 +291,32 @@
                 <h3 class="text-white font-semibold mb-3">Mô tả sản phẩm</h3>
                 <p class="text-gray-300 text-sm leading-relaxed">
                     {{ $product->description ?? 'Sản phẩm len thủ công cao cấp, được làm từ chất liệu len tự nhiên 100%. Thiết kế tinh tế, phù hợp cho mọi dịp. Sản phẩm được đan móc thủ công bởi những nghệ nhân có kinh nghiệm, đảm bảo chất lượng và độ bền cao.' }}
-                </p>
-                <button class="text-primary text-sm mt-2">Xem thêm</button>
+                </p>                
             </div>
 
             <!-- Reviews -->
             <div class="mb-6">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-white font-semibold">Đánh giá & Nhận xét</h3>
-                    <button class="text-primary text-sm">Xem tất cả</button>
+                    <a href="{{ route('product.reviews', $product->id) }}" class="text-primary text-sm hover:underline">Xem tất cả</a>
                 </div>
                 
-                <div class="bg-surface-dark/60 rounded-xl p-4 border border-gray-700">
+                <div class="bg-surface-dark/60 rounded-xl p-4 border border-gray-700 cursor-pointer hover:bg-surface-dark/80 transition-colors" 
+                     onclick="window.location.href='{{ route('product.reviews', $product->id) }}'">
                     <div class="flex items-center gap-2 mb-2">
-                        <span class="text-primary text-3xl font-bold">4.8</span>
+                        <span class="text-primary text-3xl font-bold">{{ number_format($averageRating, 1) }}</span>
                         <div>
                             <div class="rating-stars flex mb-1">
-                                <span class="material-symbols-outlined text-sm">star</span>
-                                <span class="material-symbols-outlined text-sm">star</span>
-                                <span class="material-symbols-outlined text-sm">star</span>
-                                <span class="material-symbols-outlined text-sm">star</span>
-                                <span class="material-symbols-outlined text-sm">star_half</span>
+                                @for($i = 1; $i <= 5; $i++)
+                                    <span class="material-symbols-outlined text-sm">
+                                        {{ $i <= floor($averageRating) ? 'star' : ($i == ceil($averageRating) && $averageRating - floor($averageRating) >= 0.5 ? 'star_half' : 'star_border') }}
+                                    </span>
+                                @endfor
                             </div>
-                            <p class="text-gray-400 text-xs">124 đánh giá</p>
+                            <p class="text-gray-400 text-xs">{{ $totalComments }} đánh giá</p>
+                        </div>
+                        <div class="ml-auto">
+                            <span class="material-symbols-outlined text-gray-400">chevron_right</span>
                         </div>
                     </div>
                 </div>
@@ -374,7 +381,14 @@
             loadProductVariants();
             
             // Khởi tạo giá trị mặc định
-            selectedVariant = $('.variant-option.border-primary').data('variant') || null;
+            const firstVariantButton = $('.variant-option.border-primary');
+            if (firstVariantButton.length > 0) {
+                selectedVariant = firstVariantButton.data('variant') || null;
+                console.log('Initial variant selected:', {
+                    variant_name: selectedVariant,
+                    variant_id: firstVariantButton.data('variant-id')
+                });
+            }
             
             // Variant selection
             $(document).on('click', '.variant-option', function() {
@@ -383,6 +397,14 @@
                 $(this).removeClass('border-gray-600 text-white hover:border-primary')
                        .addClass('border-primary bg-primary/10 text-primary');
                 selectedVariant = $(this).data('variant');
+                
+                // Log variant selection for debugging
+                const variantId = $(this).data('variant-id');
+                console.log('Variant selected:', {
+                    variant_name: selectedVariant,
+                    variant_id: variantId
+                });
+                
                 updateVariantInfo();
             });
 
@@ -478,49 +500,12 @@
         function updateVariantInfo() {
             console.log('Selected variant:', selectedVariant);
             
-            // Tìm variant được chọn và thay đổi hình ảnh nếu có
+            // Chỉ log thông tin variant được chọn, không thay đổi hình ảnh hay giá
             if (selectedVariant && productVariants.length > 0) {
                 const variant = productVariants.find(v => v.variant_name === selectedVariant);
-                
-                if (variant && variant.image) {
-                    // Thay đổi hình ảnh chính thành hình ảnh của variant
-                    const variantImageUrl = `/PRODUCT-IMG/${variant.image}`;
-                    $('#mainProductImage').addClass('changing');
-                    
-                    setTimeout(() => {
-                        $('#mainProductImage').attr('src', variantImageUrl)
-                            .attr('onerror', `this.src='https://via.placeholder.com/400x300/FAC638/FFFFFF?text={{ urlencode($product->name) }}'`)
-                            .removeClass('changing');
-                    }, 150);
-                    
-                    // Ẩn carousel controls khi hiển thị hình ảnh variant
-                    $('#carouselDots, .carousel-nav, .image-counter').hide();
-                } else {
-                    // Quay lại hình ảnh gốc nếu variant không có hình ảnh riêng
-                    if (productImages.length > 0) {
-                        changeImage(0, productImages[0]);
-                        if (productImages.length > 1) {
-                            $('#carouselDots, .carousel-nav, .image-counter').show();
-                        }
-                    }
+                if (variant) {
+                    console.log('Found variant:', variant);
                 }
-                
-                // Cập nhật giá nếu variant có giá khác
-                if (variant && variant.price) {
-                    const formattedPrice = parseFloat(variant.price).toLocaleString('vi-VN');
-                    $('.text-primary.text-2xl.font-bold').text(formattedPrice + 'đ');
-                }
-            } else {
-                // Quay lại hình ảnh và giá gốc
-                if (productImages.length > 0) {
-                    changeImage(0, productImages[0]);
-                    if (productImages.length > 1) {
-                        $('#carouselDots, .carousel-nav, .image-counter').show();
-                    }
-                }
-                
-                const originalPrice = parseFloat({{ $product->price ?? 0 }}).toLocaleString('vi-VN');
-                $('.text-primary.text-2xl.font-bold').text(originalPrice + 'đ');
             }
         }
 
@@ -546,7 +531,32 @@
                 };
                 
                 // Thêm thông tin variant nếu có
-                if (selectedVariant) cartData.variant_name = selectedVariant;
+                if (selectedVariant) {
+                    cartData.variant_name = selectedVariant;
+                    
+                    // Lấy variant_id từ button được chọn
+                    const selectedButton = $('.variant-option.border-primary');
+                    if (selectedButton.length > 0) {
+                        const variantId = selectedButton.data('variant-id');
+                        if (variantId) {
+                            cartData.variant_id = variantId;
+                            console.log('Using variant_id from button:', variantId);
+                        }
+                    }
+                    
+                    // Fallback: Tìm variant_id từ productVariants array nếu không có từ button
+                    if (!cartData.variant_id && productVariants && productVariants.length > 0) {
+                        const variant = productVariants.find(v => 
+                            v.variant_name && v.variant_name === selectedVariant
+                        );
+                        if (variant && variant.id) {
+                            cartData.variant_id = variant.id;
+                            console.log('Using variant_id from productVariants:', variant.id);
+                        }
+                    }
+                }
+                
+                console.log('Cart data being sent:', cartData);
                 
                 $.post('/api/cart/add', cartData, function(response) {
                     if (response.success) {

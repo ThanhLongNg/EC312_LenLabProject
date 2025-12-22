@@ -60,7 +60,25 @@ class ProductPageController extends Controller
                 }
             }
             
-            // Sorting
+            // Filter theo rating
+            if ($request->has('min_rating') && $request->min_rating) {
+                $minRating = (float) $request->min_rating;
+                $query->whereHas('comments', function($q) use ($minRating) {
+                    $q->where('is_verified', 1)
+                      ->where('is_hidden', 0)
+                      ->havingRaw('AVG(rating) >= ?', [$minRating]);
+                });
+            }
+            
+            // Filter theo số lượt mua (dựa trên order_items)
+            if ($request->has('min_sold') && $request->min_sold) {
+                $minSold = (int) $request->min_sold;
+                $query->whereHas('orderItems', function($q) use ($minSold) {
+                    $q->havingRaw('SUM(quantity) >= ?', [$minSold]);
+                });
+            }
+            
+            // Sorting - đơn giản hóa để tránh conflict với filter
             if ($request->has('sort')) {
                 switch($request->sort) {
                     case 'price-asc':
@@ -95,11 +113,27 @@ class ProductPageController extends Controller
                         2 => 'Đồ trang trí', 
                         3 => 'Thời trang len',
                         4 => 'Combo tự làm',
-                        5 => 'Sách hướng dẫn',
+                        5 => 'Sách hướng dẫn móc len',
                         6 => 'Thú bông len'
                     ];
                     $category = $categoryMap[$product->category_id] ?? 'Chưa phân loại';
                 }
+                
+                // Tính rating trung bình
+                $averageRating = \App\Models\Comment::where('product_id', $product->id)
+                    ->where('is_verified', 1)
+                    ->where('is_hidden', 0)
+                    ->avg('rating') ?? 0;
+                
+                // Tính tổng số lượng đã bán
+                $totalSold = \App\Models\OrderItem::where('product_id', $product->id)
+                    ->sum('quantity') ?? 0;
+                
+                // Đếm số lượt đánh giá
+                $reviewCount = \App\Models\Comment::where('product_id', $product->id)
+                    ->where('is_verified', 1)
+                    ->where('is_hidden', 0)
+                    ->count();
                 
                 return [
                     'id' => $product->id,
@@ -107,9 +141,24 @@ class ProductPageController extends Controller
                     'price' => (float) ($product->price ?? 0),
                     'category' => $category,
                     'image' => $product->image ?? 'default.jpg',
-                    'is_new' => isset($product->new) && ($product->new == 1 || $product->new == '1')
+                    'is_new' => isset($product->new) && ($product->new == 1 || $product->new == '1'),
+                    'average_rating' => round($averageRating, 1),
+                    'review_count' => $reviewCount,
+                    'total_sold' => $totalSold
                 ];
             });
+            
+            // Sort sau khi lấy data để tránh conflict với filter
+            if ($request->has('sort')) {
+                switch($request->sort) {
+                    case 'rating-desc':
+                        $products = $products->sortByDesc('average_rating')->values();
+                        break;
+                    case 'sold-desc':
+                        $products = $products->sortByDesc('total_sold')->values();
+                        break;
+                }
+            }
             
             return response()->json([
                 'products' => $products
@@ -139,7 +188,7 @@ class ProductPageController extends Controller
                         2 => 'Đồ trang trí', 
                         3 => 'Thời trang len',
                         4 => 'Combo tự làm',
-                        5 => 'Sách hướng dẫn',
+                        5 => 'Sách hướng dẫn móc len',
                         6 => 'Thú bông len'
                     ];
                     
@@ -183,21 +232,62 @@ class ProductPageController extends Controller
         
         // Lấy thông tin variants
         $availableVariants = $product->getAvailableVariants();
+        $variantsWithId = $product->variants()->whereNotNull('variant_name')->get(['id', 'variant_name']);
         $hasVariants = $product->hasVariants();
         
         // Lấy thông tin hình ảnh
         $productImages = $product->getAllImages();
         $hasMultipleImages = $product->hasMultipleImages();
         
+        // Lấy thông tin đánh giá
+        $averageRating = \App\Models\Comment::where('product_id', $id)
+            ->where('is_verified', 1)
+            ->where('is_hidden', 0)
+            ->avg('rating') ?? 0;
+        
+        $totalComments = \App\Models\Comment::where('product_id', $id)
+            ->where('is_verified', 1)
+            ->where('is_hidden', 0)
+            ->count();
+        
         return view('product', compact(
             'product', 
             'availableVariants', 
+            'variantsWithId',
             'hasVariants',
             'productImages',
-            'hasMultipleImages'
+            'hasMultipleImages',
+            'averageRating',
+            'totalComments'
         ));
     }
     
+    // API để lấy danh sách categories
+    public function getCategories()
+    {
+        try {
+            $categories = [
+                ['id' => 1, 'name' => 'Nguyên phụ liệu'],
+                ['id' => 2, 'name' => 'Đồ trang trí'],
+                ['id' => 3, 'name' => 'Thời trang len'],
+                ['id' => 4, 'name' => 'Combo tự làm'],
+                ['id' => 5, 'name' => 'Sách hướng dẫn móc len'],
+                ['id' => 6, 'name' => 'Thú bông len']
+            ];
+
+            return response()->json([
+                'categories' => $categories,
+                'success' => true
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'categories' => [],
+                'success' => false,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
     // API để lấy thông tin variants của sản phẩm
     public function getVariants($id)
     {
@@ -215,9 +305,7 @@ class ProductPageController extends Controller
                 'variants' => $product->variants->map(function($variant) {
                     return [
                         'id' => $variant->id,
-                        'variant_name' => $variant->variant_name,
-                        'price' => $variant->price,
-                        'image' => $variant->image
+                        'variant_name' => $variant->variant_name
                     ];
                 }),
                 'product_images' => $product->getAllImages(),

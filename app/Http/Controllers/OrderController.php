@@ -51,17 +51,25 @@ class OrderController extends Controller
         // Format order data for view
         $orderData = [
             'id' => $order->order_id, // Sử dụng order_id làm mã đơn hàng
+            'order_id' => $order->order_id, // Thêm order_id riêng
             'status' => $order->status,
             'status_text' => $order->status_text,
             'created_at' => date('d/m/Y'), // Sử dụng ngày hiện tại vì không có timestamps
-            'items' => $order->orderItems->map(function($item) {
+            'items' => $order->orderItems->map(function($item) use ($order) {
+                // Kiểm tra đã review chưa
+                $hasReviewed = \App\Models\Comment::where('user_id', Auth::id())
+                    ->where('product_id', $item->product_id)
+                    ->where('order_id', $order->order_id)
+                    ->exists();
+                
                 return [
                     'product_id' => $item->product_id,
                     'name' => $item->product_name,
                     'variant' => $this->formatVariantInfo($item->variant_info),
                     'quantity' => $item->quantity,
                     'price' => $item->price,
-                    'image' => $item->product_image ?? 'default.jpg' // Đảm bảo có fallback
+                    'image' => $item->product_image ?? 'default.jpg', // Đảm bảo có fallback
+                    'has_reviewed' => $hasReviewed // Thêm thông tin review status
                 ];
             })->toArray(),
             'shipping_address' => [

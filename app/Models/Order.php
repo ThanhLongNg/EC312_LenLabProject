@@ -84,6 +84,14 @@ class Order extends Model
     }
 
     /**
+     * Get comments for this order
+     */
+    public function comments()
+    {
+        return $this->hasMany(Comment::class, 'order_id', 'order_id');
+    }
+
+    /**
      * Get status color class
      */
     public function getStatusColorAttribute()

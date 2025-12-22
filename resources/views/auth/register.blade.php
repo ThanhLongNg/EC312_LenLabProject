@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=container-queries"></script>
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -51,8 +51,8 @@
         }
         
         .input-field {
-            background: rgba(250, 198, 56, 0.05);
-            border: 1px solid rgba(250, 198, 56, 0.2);
+            background: rgba(26, 26, 26, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
             transition: all 0.3s ease;
         }
@@ -60,11 +60,11 @@
         .input-field:focus {
             border-color: #FAC638;
             box-shadow: 0 0 0 3px rgba(250, 198, 56, 0.1);
-            background: rgba(250, 198, 56, 0.1);
+            background: rgba(26, 26, 26, 0.9);
         }
         
         .input-field::placeholder {
-            color: rgba(255, 255, 255, 0.5);
+            color: rgba(255, 255, 255, 0.6);
         }
         
         .input-icon {

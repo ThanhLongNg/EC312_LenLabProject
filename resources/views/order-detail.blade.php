@@ -90,11 +90,16 @@
             align-items: center;
             gap: 16px;
             padding: 16px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         
-        .product-item:last-child {
+        .product-item-container {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 16px;
+        }
+        
+        .product-item-container:last-child {
             border-bottom: none;
+            margin-bottom: 0;
         }
         
         .action-btn {
@@ -174,7 +179,7 @@
             <div class="order-section">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <p class="text-gray-400 text-sm mb-1">MÃ ĐỚN HÀNG</p>
+                        <p class="text-gray-400 text-sm mb-1">MÃ ĐƠN HÀNG</p>
                         <p class="text-white font-semibold text-lg">#{{ $order['id'] }}</p>
                     </div>
                     <div class="status-badge status-{{ $order['status'] }}">
@@ -230,7 +235,8 @@
                 </div>
                 @endif
                 
-                <!-- Giao hàng info -->
+                <!-- Giao hàng info - chỉ hiển thị khi chưa giao hàng -->
+                @if($order['status'] !== 'delivered')
                 <div class="mt-4 pt-4 border-t border-gray-700">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
@@ -242,6 +248,7 @@
                         </div>
                     </div>
                 </div>
+                @endif
             </div>
 
             <!-- Products -->
@@ -249,21 +256,42 @@
                 <h3 class="text-white font-semibold text-lg mb-4">Sản phẩm ({{ count($order['items']) }})</h3>
                 
                 @foreach($order['items'] as $item)
-                <div class="product-item cursor-pointer hover:bg-gray-700/30 transition-colors rounded-lg" onclick="viewProduct({{ $item['product_id'] }})">
-                    <img src="/PRODUCT-IMG/{{ $item['image'] ?? 'default.jpg' }}" 
-                         alt="{{ $item['name'] }}" 
-                         class="w-15 h-15 object-cover rounded-lg flex-shrink-0"
-                         style="width: 60px; height: 60px; min-width: 60px; min-height: 60px;"
-                         onerror="this.src='https://via.placeholder.com/60x60/FAC638/FFFFFF?text={{ urlencode(substr($item['name'], 0, 2)) }}'">
-                    <div class="flex-1">
-                        <h4 class="text-white font-semibold text-sm mb-1">{{ $item['name'] }}</h4>
-                        <p class="text-gray-400 text-xs mb-2">{{ $item['variant'] }}</p>
-                        <p class="text-gray-400 text-xs">SL: {{ $item['quantity'] }}</p>
+                <div class="product-item-container">
+                    <div class="product-item hover:bg-gray-700/30 transition-colors rounded-lg">
+                        <div class="flex items-center flex-1 cursor-pointer" onclick="viewProduct({{ $item['product_id'] }})">
+                            <img src="/PRODUCT-IMG/{{ $item['image'] ?? 'default.jpg' }}" 
+                                 alt="{{ $item['name'] }}" 
+                                 class="w-15 h-15 object-cover rounded-lg flex-shrink-0"
+                                 style="width: 60px; height: 60px; min-width: 60px; min-height: 60px;"
+                                 onerror="this.src='https://via.placeholder.com/60x60/FAC638/FFFFFF?text={{ urlencode(substr($item['name'], 0, 2)) }}'">
+                            <div class="flex-1 ml-3">
+                                <h4 class="text-white font-semibold text-sm mb-1">{{ $item['name'] }}</h4>
+                                <p class="text-gray-400 text-xs mb-2">{{ $item['variant'] }}</p>
+                                <p class="text-gray-400 text-xs">SL: {{ $item['quantity'] }}</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <p class="text-primary font-bold text-sm">{{ number_format($item['price']) }}đ</p>
+                                <span class="material-symbols-outlined text-gray-400 text-sm">chevron_right</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <p class="text-primary font-bold text-sm">{{ number_format($item['price']) }}đ</p>
-                        <span class="material-symbols-outlined text-gray-400 text-sm">chevron_right</span>
+                    
+                    @if($order['status'] === 'delivered')
+                    <div class="mt-2 px-2">
+                        @if($item['has_reviewed'])
+                            <button disabled class="w-full bg-gray-600 text-gray-400 py-2 px-3 rounded-lg text-xs font-medium cursor-not-allowed flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined text-sm">check_circle</span>
+                                Đã đánh giá
+                            </button>
+                        @else
+                            <button onclick="reviewProduct({{ $item['product_id'] }}, '{{ $order['order_id'] }}')" 
+                                    class="w-full bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary py-2 px-3 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined text-sm">star</span>
+                                Đánh giá sản phẩm
+                            </button>
+                        @endif
                     </div>
+                    @endif
                 </div>
                 @endforeach
             </div>
@@ -425,6 +453,11 @@
             const currentUrl = window.location.pathname;
             const returnUrl = encodeURIComponent(currentUrl + '?return_from=product');
             window.location.href = `/san-pham/${productId}?return=${returnUrl}`;
+        }
+        
+        // Navigate to review page
+        function reviewProduct(productId, orderId) {
+            window.location.href = `/danh-gia/tao?product_id=${productId}&order_id=${orderId}`;
         }
         
         // Initialize on page load
