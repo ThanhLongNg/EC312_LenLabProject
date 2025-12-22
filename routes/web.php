@@ -13,15 +13,19 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\PostController as AdminPostController;
+use App\Http\Controllers\Admin\BannerController;
 
 // ✅ Site controllers
 use App\Http\Controllers\ProductPageController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CartController;
-use App\Http\Controllers\PostController;
+use App\Http\Controllers\PostController; // nếu bạn vẫn dùng route /bai-viet/{id}
+use App\Http\Controllers\PostPublicController; // route /blog/{slug}
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\LandingPageController;
 
-Route::get('/', fn () => view('landingpage'));
+Route::get('/', [LandingPageController::class, 'index']);
 
 // ---------------- USER PAGES ----------------
 Route::get('/san-pham', [ProductPageController::class, 'index'])->name('products');
@@ -137,6 +141,19 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     Route::delete('/products/bulk-delete', [ProductController::class, 'bulkDelete'])->name('admin.products.bulkDelete');
     Route::delete('/products', [ProductController::class, 'bulkDelete'])->name('admin.products.bulkDelete');
     Route::post('/products/{id}/toggle-active', [ProductController::class, 'toggleActive'])->name('admin.products.toggleActive');
+
+    // Posts
+    Route::get('/posts', [AdminPostController::class, 'index'])->name('admin.posts.index');
+    Route::get('/posts/create', [AdminPostController::class, 'create'])->name('admin.posts.create');
+    Route::post('/posts', [AdminPostController::class, 'store'])->name('admin.posts.store');
+    Route::get('/posts/{id}/edit', [AdminPostController::class, 'edit'])->name('admin.posts.edit');
+    Route::put('/posts/{id}', [AdminPostController::class, 'update'])->name('admin.posts.update');
+    Route::delete('/posts/{id}', [AdminPostController::class, 'destroy'])->name('admin.posts.destroy');
+    Route::delete('/posts', [AdminPostController::class, 'bulkDelete'])->name('admin.posts.bulkDelete');
+
+    // Banners
+    Route::get('/banners', [BannerController::class, 'edit'])->name('admin.banners.edit');
+    Route::put('/banners', [BannerController::class, 'update'])->name('admin.banners.update');
 });
 
 // ---------------- MARKETING AREA ----------------
@@ -157,6 +174,10 @@ Route::middleware('auth')->group(function () {
 Route::get('/chinh-sach', function () {
     return view('policy');
 })->name('policy');
+
+// Blog pages
+Route::get('/blog', [PostPublicController::class, 'index'])->name('blog.index');
+Route::get('/blog/{slug}', [PostPublicController::class, 'show'])->name('blog.show');
 
 // Order detail routes
 Route::middleware('auth')->group(function () {

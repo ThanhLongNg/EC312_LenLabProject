@@ -455,13 +455,28 @@
         </div>
     </div>
 </header>
+@php
+    $latestPosts = \App\Models\Post::where('is_published', true)
+        ->orderByDesc('published_at')
+        ->take(6)
+        ->get();
+@endphp
 
 <!-- Main Content -->
 <main class="flex-grow flex flex-col gap-8 pb-12">
     <!-- Hero Section -->
     <section class="relative px-4 pt-4">
         <div class="relative w-full h-[500px] rounded-2xl overflow-hidden shadow-2xl group">
-            <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style="background-image: url('{{ asset('banner.png') }}')"></div>
+            @php
+                $heroUrl = $heroBanner?->image 
+                    ? asset('storage/'.$heroBanner->image).'?v='.optional($heroBanner->updated_at)->timestamp
+                    : asset('banner.png');
+            @endphp
+            <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style="background-image: url('{{ $heroUrl }}')"></div>
+            @if($heroBanner?->link)
+                {{-- nếu muốn click banner --}}
+                <a href="{{ $heroBanner->link }}" class="absolute inset-0 z-20"></a>
+            @endif
             <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
             <div class="absolute inset-0 flex flex-col items-center justify-end pb-12 px-6 text-center z-10">
                 <p class="text-gray-300 text-sm md:text-lg mb-8 max-w-md font-light">Khám phá bộ sưu tập len thủ công độc đáo, mang lại sự ấm áp và phong cách cho cuộc sống của bạn.</p>
@@ -509,44 +524,62 @@
                     <p class="text-xs text-gray-600 dark:text-gray-300 mt-1">Giảm 15% cho đơn hàng đầu tiên.</p>
                 </div>
                 <div class="h-24 w-24 flex-shrink-0 rotate-12 rounded-xl overflow-hidden border-2 border-white/20 shadow-lg">
-                    <img alt="Cozy winter setup with scarf and coffee" class="h-full w-full object-cover" src="{{ asset('winter-campaign.jpg') }}"/>
+                    @php
+                        $campaignUrl = $campaignBanner?->image 
+                            ? asset('storage/'.$campaignBanner->image).'?v='.optional($campaignBanner->updated_at)->timestamp
+                            : asset('winter-campaign.jpg');
+                    @endphp
+                    <img alt="Cozy winter setup with scarf and coffee" class="h-full w-full object-cover" src="{{ $campaignUrl }}"/>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Blog Section -->
-    <section class="flex flex-col gap-4">
-        <div class="px-4 flex items-center justify-between">
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Bài viết mới</h2>
-        </div>
-        <div class="flex overflow-x-auto gap-4 px-4 pb-4 hide-scrollbar snap-x">
-            <article class="flex-none w-[280px] snap-center flex flex-col gap-3">
+<section class="flex flex-col gap-4">
+    <div class="px-4 flex items-center justify-between">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Bài viết mới</h2>
+
+        <a href="{{ route('blog.index') }}"
+           class="text-sm font-medium text-primary hover:text-primary/80 flex items-center gap-1 transition-colors">
+            Xem tất cả <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+        </a>
+    </div>
+
+    <div class="flex overflow-x-auto gap-4 px-4 pb-4 hide-scrollbar snap-x">
+        @forelse($latestPosts as $post)
+            <article class="flex-none w-[280px] snap-center flex flex-col gap-3 cursor-pointer"
+                     onclick="window.location.href='{{ route('blog.show', $post->slug) }}'">
                 <div class="aspect-video w-full rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-800">
-                    <img alt="Woman knitting with large wool yarn" class="h-full w-full object-cover hover:scale-105 transition-transform duration-500" src="{{ asset('blog1.jpg') }}"/>
+                    <img alt="{{ $post->title }}"
+                         class="h-full w-full object-cover hover:scale-105 transition-transform duration-500"
+                         src="{{ $post->thumbnail ? asset('storage/'.$post->thumbnail) : asset('blog1.jpg') }}"/>
                 </div>
+
                 <div class="flex flex-col gap-1">
                     <div class="flex items-center gap-2 text-[10px] text-gray-500 uppercase font-bold tracking-wider">
-                        <span class="text-primary">Tips</span><span>•</span><span>12 T10, 2023</span>
+                        <span class="text-primary">{{ $post->category ?? 'Blog' }}</span>
+                        <span>•</span>
+                        <span>{{ optional($post->published_at)->format('d/m/Y') ?? '' }}</span>
                     </div>
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-white leading-tight">Cách bảo quản len bền đẹp như mới</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">Hướng dẫn chi tiết cách giặt và phơi đồ len để không bị bai dão...</p>
+
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white leading-tight line-clamp-2">
+                        {{ $post->title }}
+                    </h3>
+
+                    <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+                        {{ $post->excerpt }}
+                    </p>
                 </div>
             </article>
-            <article class="flex-none w-[280px] snap-center flex flex-col gap-3">
-                <div class="aspect-video w-full rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-800">
-                    <img alt="Assorted colorful wool balls" class="h-full w-full object-cover hover:scale-105 transition-transform duration-500" src="{{ asset('blog2.jpg') }}"/>
-                </div>
-                <div class="flex flex-col gap-1">
-                    <div class="flex items-center gap-2 text-[10px] text-gray-500 uppercase font-bold tracking-wider">
-                        <span class="text-primary">Trend</span><span>•</span><span>05 T10, 2023</span>
-                    </div>
-                    <h3 class="text-lg font-bold text-gray-900 dark:text-white leading-tight">Xu hướng màu sắc Thu Đông 2025</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">Những tông màu ấm áp dự kiến sẽ lên ngôi trong mùa lạnh năm nay.</p>
-                </div>
-            </article>
-        </div>
-    </section>
+        @empty
+            <div class="px-4 text-gray-500 dark:text-gray-400">
+                Chưa có bài viết nào.
+            </div>
+        @endforelse
+    </div>
+</section>
+
 </main>
 
 <!-- Footer -->
@@ -847,32 +880,29 @@ $(document).ready(function() {
                                 <span class="text-white font-medium">Trang chủ</span>
                             </a>
                             
-                            <div class="menu-dropdown">
-                                <button class="flex items-center justify-between w-full p-3 rounded-xl hover:bg-white/10 transition-all duration-200 group" id="productsMenuToggle">
-                                    <div class="flex items-center gap-4">
-                                        <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">inventory_2</span>
-                                        <span class="text-white font-medium">Sản phẩm</span>
-                                    </div>
-                                    <span class="material-symbols-outlined text-primary transition-transform duration-200" id="productsMenuIcon">expand_more</span>
-                                </button>
-                                <div class="ml-12 mt-2 space-y-1 max-h-0 overflow-hidden transition-all duration-300" id="productsSubmenu">
-                                    <a href="/san-pham?search=Nguyên phụ liệu" class="block p-2 text-yellow-300 text-sm hover:text-white hover:bg-white/5 rounded-lg transition-colors">Nguyên phụ liệu</a>
-                                    <a href="/san-pham?search=Đồ trang trí" class="block p-2 text-yellow-300 text-sm hover:text-white hover:bg-white/5 rounded-lg transition-colors">Đồ trang trí</a>
-                                    <a href="/san-pham?search=Thời trang len" class="block p-2 text-yellow-300 text-sm hover:text-white hover:bg-white/5 rounded-lg transition-colors">Thời trang len</a>
-                                    <a href="/san-pham?search=Combo tự làm" class="block p-2 text-yellow-300 text-sm hover:text-white hover:bg-white/5 rounded-lg transition-colors">Combo tự làm</a>
-                                    <a href="/san-pham?search=Thú bông" class="block p-2 text-yellow-300 text-sm hover:text-white hover:bg-white/5 rounded-lg transition-colors">Thú bông len</a>
-                                </div>
-                            </div>
+                            <a href="/san-pham" class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/10 transition-all duration-200 group">
+                                <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">inventory_2</span>
+                                <span class="text-white font-medium">Sản phẩm</span>
+                            </a>
 
+                            <a href="/san-pham-so" class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/10 transition-all duration-200 group">
+                                <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">description</span>
+                                <span class="text-white font-medium">Sản phẩm số</span>
+                            </a>
                             
                             <a href="/gioi-thieu" class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/10 transition-all duration-200 group">
                                 <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">info</span>
-                                <span class="text-white font-medium">Giới thiệu</span>
+                                <span class="text-white font-medium">Về chúng tôi</span>
                             </a>
                                                             
                             <a href="#" class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/10 transition-all duration-200 group">
                                 <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">receipt_long</span>
                                 <span class="text-white font-medium">Tin tức & Blog</span>
+                            </a>
+
+                            <a href="#" class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/10 transition-all duration-200 group">
+                                <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">support_agent</span>
+                                <span class="text-white font-medium">Hỗ trợ</span>
                             </a>
                             
                         </nav>
