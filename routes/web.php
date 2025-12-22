@@ -117,12 +117,13 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     Route::get('/orders/list', [OrderController::class, 'list'])->name('admin.orders.list');
     Route::get('/orders/create', [OrderController::class, 'create'])->name('admin.orders.create');
     Route::post('/orders', [OrderController::class, 'store'])->name('admin.orders.store');
-    Route::get('/orders/{id}', [OrderController::class, 'show'])->name('admin.orders.show');
-    Route::delete('/orders/{id}', [OrderController::class, 'destroy'])->name('admin.orders.delete');
+    Route::get('/orders/{order:order_id}', [OrderController::class, 'show'])->name('admin.orders.show');
+    Route::delete('/orders/{order:order_id}', [OrderController::class, 'destroy'])->name('admin.orders.delete');
     Route::delete('/orders', [OrderController::class, 'bulkDelete'])->name('admin.orders.bulkDelete');
-    Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('admin.orders.updateStatus');
+    Route::patch('/orders/{order:order_id}/status', [OrderController::class, 'updateStatus'])->name('admin.orders.status');
+    Route::patch('/orders/{order:order_id}/cancel', [OrderController::class, 'cancel'])->name('admin.orders.cancel');
+    Route::post('/orders/{order:order_id}/refund', [OrderController::class, 'refund'])->name('admin.orders.refund');
     Route::get('/products/{id}/price', [OrderController::class, 'productPrice'])->name('admin.product.price');
-
     // Products
     Route::get('/products', [ProductController::class, 'index'])->name('admin.products.index');
     Route::get('/products/list', [ProductController::class, 'list'])->name('admin.products.list');
@@ -228,3 +229,4 @@ Route::prefix('api')->group(function () {
     Route::post('/reviews', [ReviewController::class, 'submitReview'])->middleware('auth:api');
     Route::get('/products/related', [ReviewController::class, 'getRelatedProducts']);
 });
+

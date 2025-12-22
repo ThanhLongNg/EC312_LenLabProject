@@ -19,39 +19,50 @@
 </form>
 
 <!-- Search and Filter Bar -->
-<div class="bg-surface-light dark:bg-surface-dark rounded-xl p-4 mb-6 shadow-sm border border-border-light dark:border-border-dark flex flex-col md:flex-row gap-4 items-center justify-between">
-    <!-- Search Input -->
-    <div class="relative w-full md:w-96">
-        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <span class="material-icons-round text-gray-400">search</span>
-        </span>
-        <input type="text" 
-               class="pl-10 w-full rounded-lg border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-primary focus:border-primary transition-colors" 
-               placeholder="Tìm kiếm theo tên, SKU..." 
-               name="search" 
-               value="{{ request('search') }}">
+<form method="GET" action="{{ route('admin.products.index') }}">
+    <div class="bg-surface-light dark:bg-surface-dark rounded-xl p-4 mb-6 shadow-sm border border-border-light dark:border-border-dark flex flex-col md:flex-row gap-4 items-center justify-between">
+        <!-- Search Input -->
+        <div class="relative w-full md:w-96">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <span class="material-icons-round text-gray-400">search</span>
+            </span>
+
+            <input type="text"
+                   class="pl-10 w-full rounded-lg border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-primary focus:border-primary transition-colors"
+                   placeholder="Tìm kiếm theo tên, SKU..."
+                   name="keyword"
+                   value="{{ request('keyword') }}">
+        </div>
+
+        <!-- Filters -->
+        <div class="flex items-center gap-3 w-full md:w-auto">
+            <select class="rounded-lg border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-primary focus:border-primary text-sm py-2 px-3"
+                    name="category_id"
+                    onchange="this.form.submit()">
+                <option value="">Tất cả danh mục</option>
+                @foreach($categories as $id => $name)
+                    <option value="{{ $id }}" {{ (string)request('category_id') === (string)$id ? 'selected' : '' }}>
+                        {{ $name }}
+                    </option>
+                @endforeach
+            </select>
+
+            <select class="rounded-lg border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-primary focus:border-primary text-sm py-2 px-3"
+                    name="is_active"
+                    onchange="this.form.submit()">
+                <option value="">Trạng thái</option>
+                <option value="1" {{ request('is_active') === '1' ? 'selected' : '' }}>Đang bán</option>
+                <option value="0" {{ request('is_active') === '0' ? 'selected' : '' }}>Đã ẩn</option>
+            </select>
+
+            <!-- Nút submit (đổi từ type="button" -> type="submit") -->
+            <button type="submit"
+                    class="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
+                <span class="material-icons-round text-xl">filter_list</span>
+            </button>
+        </div>
     </div>
-    
-    <!-- Filters -->
-    <div class="flex items-center gap-3 w-full md:w-auto">
-        <select class="rounded-lg border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-primary focus:border-primary text-sm py-2 px-3" name="category">
-            <option value="">Tất cả danh mục</option>
-            @foreach($categories as $id => $name)
-                <option value="{{ $id }}" {{ request('category') == $id ? 'selected' : '' }}>{{ $name }}</option>
-            @endforeach
-        </select>
-        
-        <select class="rounded-lg border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-primary focus:border-primary text-sm py-2 px-3" name="is_active">
-            <option value="">Trạng thái</option>
-            <option value="1" {{ request('is_active') == '1' ? 'selected' : '' }}>Đang bán</option>
-            <option value="0" {{ request('is_active') == '0' ? 'selected' : '' }}>Đã ẩn</option>
-        </select>
-        
-        <button type="button" class="p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
-            <span class="material-icons-round text-xl">filter_list</span>
-        </button>
-    </div>
-</div>
+</form>
 
 <!-- Products Table -->
 <div class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark overflow-hidden">
@@ -369,6 +380,16 @@
 
     // Initialize bulk delete IDs
     updateBulkDeleteIds();
+</script>
+<script>
+  const searchInput = document.querySelector('input[name="keyword"]');
+  if (searchInput) {
+    let t;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(t);
+      t = setTimeout(() => searchInput.form.submit(), 400);
+    });
+  }
 </script>
 
 <script>

@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class Order extends Model
 {
     use HasFactory;
-    public $timestamps = false; // Tắt timestamps vì bảng không có created_at, updated_at
     protected $table = 'orders';
     protected $primaryKey = 'order_id';
     public $incrementing = false;

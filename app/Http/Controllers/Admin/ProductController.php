@@ -13,29 +13,53 @@ class ProductController extends BaseAdminController
     // 💚 1) Trang danh sách sản phẩm với search + filter + paginate
     public function index(Request $request)
     {
-        $query = Product::with('variants');
+        $query = Product::query()->with('variants');
+
+        /**
+         * Backward-compatible inputs:
+         * - HEAD dùng: keyword, category_id, is_active (giá trị trực tiếp)
+         * - main dùng: search, category, status, is_active (all/1/0), new, sort_by, sort_order, per_page
+         */
+        $search = $request->filled('search')
+            ? $request->search
+            : ($request->filled('keyword') ? $request->keyword : null);
+
+        $category = $request->filled('category')
+            ? $request->category
+            : ($request->filled('category_id') ? $request->category_id : null);
 
         // Search by name
-        if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+        if (!empty($search)) {
+            $query->where('name', 'like', '%' . $search . '%');
         }
 
-        // Filter by category
-        if ($request->filled('category') && $request->category !== 'all') {
-            $query->where('category_id', $request->category);
+        // Filter by category (main: 'all' | id)
+        if (!empty($category) && $category !== 'all') {
+            $query->where('category_id', $category);
         }
 
-        // Filter by status
+        // Filter by status (main: 'all' | value)
         if ($request->filled('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
         }
 
-        // Filter by is_active
-        if ($request->filled('is_active') && $request->is_active !== 'all') {
-            $query->where('is_active', $request->is_active == '1');
+        /**
+         * Filter by is_active
+         * - main: is_active = 'all' | '1' | '0'
+         * - HEAD: is_active = 1/0 (hoặc true/false)
+         */
+        if ($request->filled('is_active')) {
+            if ($request->is_active !== 'all') {
+                // Nếu là '1'/'0' thì convert bool, nếu là số/bool thì vẫn ok
+                $isActive = ($request->is_active === '1' || $request->is_active === 1 || $request->is_active === true || $request->is_active === 'true');
+                if ($request->is_active === '0' || $request->is_active === 0 || $request->is_active === false || $request->is_active === 'false') {
+                    $isActive = false;
+                }
+                $query->where('is_active', $isActive);
+            }
         }
 
-        // Filter by new products
+        // Filter by new products (main: new = 'all' | '1' | '0')
         if ($request->filled('new') && $request->new !== 'all') {
             $query->where('new', $request->new == '1');
         }
@@ -43,7 +67,7 @@ class ProductController extends BaseAdminController
         // Sorting
         $sortBy = $request->get('sort_by', 'id');
         $sortOrder = $request->get('sort_order', 'desc');
-        
+
         $allowedSorts = ['id', 'name', 'price', 'quantity', 'created_at'];
         if (in_array($sortBy, $allowedSorts)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -76,9 +100,9 @@ class ProductController extends BaseAdminController
         // Search by name or description
         if ($request->filled('search')) {
             $searchTerm = $request->search;
-            $query->where(function($q) use ($searchTerm) {
+            $query->where(function ($q) use ($searchTerm) {
                 $q->where('name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('description', 'like', '%' . $searchTerm . '%');
+                    ->orWhere('description', 'like', '%' . $searchTerm . '%');
             });
         }
 
@@ -118,7 +142,7 @@ class ProductController extends BaseAdminController
         // Sorting
         $sortBy = $request->get('sort_by', 'id');
         $sortOrder = $request->get('sort_order', 'desc');
-        
+
         $allowedSorts = ['id', 'name', 'price', 'quantity', 'created_at'];
         if (in_array($sortBy, $allowedSorts)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -224,7 +248,7 @@ class ProductController extends BaseAdminController
 
         try {
             Product::whereIn('id', $request->ids)->delete();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Đã xóa ' . count($request->ids) . ' sản phẩm thành công!'
@@ -296,7 +320,6 @@ class ProductController extends BaseAdminController
             $product->update($updateData);
 
             return redirect()->route('admin.products.index')->with('success', 'Cập nhật sản phẩm thành công!');
-            
         } catch (\Exception $e) {
             return back()->with('error', 'Lỗi: ' . $e->getMessage())->withInput();
         }
@@ -306,18 +329,18 @@ class ProductController extends BaseAdminController
     public function quickSearch(Request $request)
     {
         $query = $request->get('q', '');
-        
+
         if (strlen($query) < 2) {
             return response()->json(['results' => []]);
         }
 
         $products = Product::where('name', 'like', '%' . $query . '%')
-                          ->select('id', 'name', 'price', 'image')
-                          ->limit(10)
-                          ->get();
+            ->select('id', 'name', 'price', 'image')
+            ->limit(10)
+            ->get();
 
         return response()->json([
-            'results' => $products->map(function($product) {
+            'results' => $products->map(function ($product) {
                 return [
                     'id' => $product->id,
                     'text' => $product->name,
@@ -340,9 +363,9 @@ class ProductController extends BaseAdminController
             'new_products' => Product::where('new', 1)->count(),
             'low_stock' => Product::where('quantity', '<=', 5)->count(),
             'categories' => Product::selectRaw('category_id, COUNT(*) as count')
-                                  ->groupBy('category_id')
-                                  ->get()
-                                  ->pluck('count', 'category_id')
+                ->groupBy('category_id')
+                ->get()
+                ->pluck('count', 'category_id')
         ];
 
         return response()->json($stats);

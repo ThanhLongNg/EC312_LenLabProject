@@ -12,10 +12,28 @@ use App\Models\Product;
 
 class OrderController extends BaseAdminController
 {
-    // Trang danh sách đơn hàng
-    public function index()
+    // Trang danh sách đơn hàng + lọc
+    public function index(Request $request)
     {
-        $orders = Order::with('user', 'items')->get();
+        $q = trim($request->q ?? '');
+        $status = $request->status;
+        $paymentMethod = $request->payment_method;
+
+        $orders = Order::query()
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('order_id', 'like', "%{$q}%")
+                        ->orWhere('full_name', 'like', "%{$q}%")
+                        ->orWhere('phone', 'like', "%{$q}%")
+                        ->orWhere('email', 'like', "%{$q}%");
+                });
+            })
+            ->when($status, fn($query) => $query->where('status', $status))
+            ->when($paymentMethod, fn($query) => $query->where('payment_method', $paymentMethod))
+            ->orderByDesc('created_at')
+            ->paginate(10)
+            ->withQueryString(); // giữ filter khi bấm pagination
+
         return $this->view('admin.orders.index_simple', compact('orders'));
     }
 
@@ -24,15 +42,15 @@ class OrderController extends BaseAdminController
     {
         $orders = Order::with('user')
             ->select('orders.*')
-            ->orderBy('id', 'DESC')
+            ->orderBy('created_at', 'DESC')
             ->get();
 
         $mapped = $orders->map(function ($o) {
             return [
-                'id' => $o->id,
-                'order_code' => $o->order_code,
-                'customer_name' => $o->user->name ?? 'Không có',
-                'order_date' => $o->created_at->format('d/m/Y H:i'),
+                'id' => $o->order_id,
+                'order_code' => $o->order_id,
+                'customer_name' => $o->user->name ?? ($o->full_name ?? 'Không có'),
+                'order_date' => optional($o->created_at)->format('d/m/Y H:i'),
                 'total' => $o->total_amount,
                 'status' => $o->status
             ];
@@ -47,11 +65,11 @@ class OrderController extends BaseAdminController
     // Chi tiết đơn hàng
     public function show($id)
     {
-        $order = Order::with('items.product', 'user')->where('order_id', $id)->firstOrFail();
+        $order = Order::with(['orderItems', 'user'])
+            ->where('order_id', $id)
+            ->firstOrFail();
 
-        return $this->view('admin.orders.detail_simple', [
-            'order' => $order
-        ]);
+        return $this->view('admin.orders.detail_simple', compact('order'));
     }
 
     // Xóa đơn hàng
@@ -65,7 +83,8 @@ class OrderController extends BaseAdminController
     // Xóa nhiều đơn hàng
     public function bulkDelete(Request $request)
     {
-        Order::whereIn('id', $request->ids)->delete();
+        $ids = $request->input('ids', []);
+        Order::whereIn('order_id', $ids)->delete();
 
         return response()->json(['success' => true]);
     }
@@ -84,7 +103,7 @@ class OrderController extends BaseAdminController
             'full_name'  => 'required',
             'phone' => 'required',
             'email' => 'required|email',
-            'status' => 'required',
+            'status' => 'required|in:pending,processing,shipped,delivered,cancelled',
             'total_amount' => 'required|numeric|min:0',
             'products' => 'required|array|min:1',
             'products.*.id' => 'required|exists:products,id',
@@ -93,34 +112,36 @@ class OrderController extends BaseAdminController
 
         $orderId = time() . rand(1000, 9999);
 
-        $order = Order::create([
-            'order_id' => $orderId,
-            'full_name' => $request->full_name,
-            'phone' => $request->phone,
-            'email' => $request->email,
-            'province' => $request->province,
-            'district' => $request->district,
-            'specific_address' => $request->specific_address,
-            'shipping_fee' => $request->shipping_fee ?? 0,
-            'discount_amount' => $request->discount_amount ?? 0,
-            'payment_method' => $request->payment_method ?? 'cod',
-            'order_note' => $request->note,
-            'status' => $request->status,
-            'total_amount' => $request->total_amount,
-            'created_at' => now(),
-        ]);
+        DB::transaction(function () use ($request, $orderId) {
+            $order = Order::create([
+                'order_id' => $orderId,
+                'full_name' => $request->full_name,
+                'phone' => $request->phone,
+                'email' => $request->email,
+                'province' => $request->province,
+                'district' => $request->district, // nếu DB không có district thì bỏ dòng này
+                'specific_address' => $request->specific_address,
+                'shipping_fee' => $request->shipping_fee ?? 0,
+                'discount_amount' => $request->discount_amount ?? 0,
+                'payment_method' => $request->payment_method ?? 'cod',
+                'payment_status' => $request->payment_status ?? 'pending',
+                'order_note' => $request->note,
+                'status' => $request->status,
+                'total_amount' => $request->total_amount,
+                'created_at' => now(),
+            ]);
 
-        // Lưu order items
-        foreach ($request->products as $productData) {
-            if (!empty($productData['id']) && !empty($productData['quantity'])) {
-                OrderItem::create([
-                    'order_id' => $orderId, // Sử dụng order_id thay vì id
-                    'product_id' => $productData['id'],
-                    'quantity' => $productData['quantity'],
-                    'price' => $productData['price'] ?? 0,
-                ]);
+            foreach ($request->products as $productData) {
+                if (!empty($productData['id']) && !empty($productData['quantity'])) {
+                    OrderItem::create([
+                        'order_id' => $orderId,
+                        'product_id' => $productData['id'],
+                        'quantity' => $productData['quantity'],
+                        'price' => $productData['price'] ?? 0,
+                    ]);
+                }
             }
-        }
+        });
 
         return redirect()->route('admin.orders.index')->with('success', 'Tạo đơn hàng thành công!');
     }
@@ -133,35 +154,88 @@ class OrderController extends BaseAdminController
     }
 
     // Cập nhật trạng thái đơn hàng
-    public function updateStatus(Request $request, $id)
+    public function updateStatus(Request $request, \App\Models\Order $order)
     {
-        try {
-            $request->validate([
-                'status' => 'required|in:pending,confirmed,shipping,delivered,cancelled'
-            ]);
+        $request->validate([
+            'status' => 'required|in:pending,processing,shipped,delivered,cancelled',
+        ]);
 
-            // Kiểm tra order tồn tại
-            $orderExists = \DB::table('orders')->where('order_id', $id)->exists();
-            if (!$orderExists) {
-                return redirect()->route('admin.orders.index')->with('error', "Không tìm thấy đơn hàng với ID: {$id}");
-            }
-
-            // Lấy trạng thái cũ
-            $oldStatus = \DB::table('orders')->where('order_id', $id)->value('status');
-            
-            // Update trạng thái
-            $updated = \DB::table('orders')
-                ->where('order_id', $id)
-                ->update(['status' => $request->status]);
-
-            if ($updated) {
-                return redirect()->route('admin.orders.index')->with('success', "Cập nhật trạng thái đơn hàng ORD-{$id} từ '{$oldStatus}' thành '{$request->status}' thành công!");
-            } else {
-                return redirect()->route('admin.orders.index')->with('error', 'Không thể cập nhật trạng thái đơn hàng!');
-            }
-            
-        } catch (\Exception $e) {
-            return redirect()->route('admin.orders.index')->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+        // Không cho đổi trạng thái nếu đã hủy
+        if ($order->status === 'cancelled') {
+            return back()->with('error', 'Đơn đã hủy không thể cập nhật trạng thái.');
         }
+
+        // Không cho đổi trạng thái nếu đã giao
+        if ($order->status === 'delivered') {
+            return back()->with('error', 'Đơn đã giao không thể cập nhật.');
+        }
+
+        $order->status = $request->status;
+        $order->save();
+
+        return back()->with('success', 'Cập nhật trạng thái thành công.');
+    }
+
+    public function cancel(Request $request, \App\Models\Order $order)
+    {
+        if ($order->status === 'delivered') {
+            return back()->with('error', 'Đơn đã giao không thể hủy.');
+        }
+
+        $order->status = 'cancelled';
+
+        // Nếu chuyển khoản và đã thanh toán thì chuyển sang requested (chờ hoàn)
+        if ($order->payment_method === 'bank_transfer' && $order->payment_status === 'paid') {
+            $order->refund_status = 'requested';
+            $order->refund_amount = $order->refund_amount ?? $order->total_amount;
+        }
+
+        $order->save();
+
+        return back()->with('success', 'Đã hủy đơn hàng.');
+    }
+
+    // ✅ Hoàn tiền (fix binding + logic payment_status)
+    public function refund(Request $request, $orderId)
+    {
+        $order = Order::where('order_id', $orderId)->firstOrFail();
+
+        $request->validate([
+            'refund_status' => 'required|in:requested,refunded,rejected,none',
+            'refund_amount' => 'nullable|numeric|min:0',
+            'refund_note'   => 'nullable|string|max:2000',
+        ]);
+
+        if ($order->payment_method !== 'bank_transfer') {
+            return back()->with('error', 'Đơn COD không cần hoàn tiền.');
+        }
+
+        DB::transaction(function () use ($request, $order) {
+            $order->refund_status = $request->refund_status;
+
+            $order->refund_amount = $request->refund_amount
+                ?? $order->refund_amount
+                ?? $order->total_amount;
+
+            $order->refund_note = $request->refund_note;
+
+            if ($request->refund_status === 'refunded') {
+                $order->refunded_at = now();
+                $order->payment_status = 'refunded';
+            } elseif ($request->refund_status === 'requested') {
+                $order->refunded_at = null;
+                $order->payment_status = 'refunding';
+            } else {
+                // none / rejected
+                $order->refunded_at = null;
+                if ($order->payment_status === 'refunding') {
+                    $order->payment_status = 'paid';
+                }
+            }
+
+            $order->save();
+        });
+
+        return back()->with('success', 'Cập nhật hoàn tiền thành công.');
     }
 }
