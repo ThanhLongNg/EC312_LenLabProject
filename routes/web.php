@@ -86,7 +86,25 @@ Route::post('/admin/logout', [AdminAuthController::class, 'logout'])->name('admi
 
 // ---------------- ADMIN AREA ----------------
 Route::prefix('admin')->middleware('admin')->group(function () {
+    Route::get('/', function () {
+        return redirect()->route('admin.dashboard');
+    })->name('admin.index');
+    
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+    Route::get('/ui-configuration', [App\Http\Controllers\Admin\UiConfigController::class, 'index'])->name('admin.ui_config');
+    
+    // UI Configuration API routes
+    Route::post('/ui-configuration/update', [App\Http\Controllers\Admin\UiConfigController::class, 'update'])->name('admin.ui_config.update');
+    Route::get('/ui-configuration/settings', [App\Http\Controllers\Admin\UiConfigController::class, 'getSettings'])->name('admin.ui_config.settings');
+    Route::delete('/ui-configuration/file', [App\Http\Controllers\Admin\UiConfigController::class, 'deleteFile'])->name('admin.ui_config.delete_file');
+    
+    // Digital Products Routes
+    Route::get('/digital-products', [App\Http\Controllers\Admin\DigitalProductController::class, 'index'])->name('admin.digital-products.index');
+    Route::post('/digital-products', [App\Http\Controllers\Admin\DigitalProductController::class, 'store'])->name('admin.digital-products.store');
+    Route::post('/digital-products/upload', [App\Http\Controllers\Admin\DigitalProductController::class, 'upload'])->name('admin.digital-products.upload');
+    Route::post('/digital-products/add-link', [App\Http\Controllers\Admin\DigitalProductController::class, 'addLink'])->name('admin.digital-products.add-link');
+    Route::delete('/digital-products/delete', [App\Http\Controllers\Admin\DigitalProductController::class, 'delete'])->name('admin.digital-products.delete');
+    Route::post('/digital-products/{id}/toggle-active', [App\Http\Controllers\Admin\DigitalProductController::class, 'toggleActive'])->name('admin.digital-products.toggle-active');
 
     // Customers
     Route::get('/customers', [CustomerController::class, 'index'])->name('admin.customers.index');

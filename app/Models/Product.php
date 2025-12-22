@@ -45,6 +45,16 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class);
     }
     
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+    
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+    
     // Kiểm tra xem sản phẩm có nhiều biến thể không
     public function hasMultipleVariants()
     {

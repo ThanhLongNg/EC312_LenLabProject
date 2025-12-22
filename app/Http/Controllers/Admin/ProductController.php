@@ -8,43 +8,89 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Support\Facades\Storage;
 
-class ProductController extends Controller
+class ProductController extends BaseAdminController
 {
     // 💚 1) Trang danh sách sản phẩm với search + filter + paginate
     public function index(Request $request)
-{
-    $query = Product::query()->with('variants');
+    {
+        $query = Product::query()->with('variants');
 
-    // 🔍 SEARCH theo tên
-    if ($request->filled('keyword')) {
-        $query->where('name', 'like', '%' . $request->keyword . '%');
+        /**
+         * Backward-compatible inputs:
+         * - HEAD dùng: keyword, category_id, is_active (giá trị trực tiếp)
+         * - main dùng: search, category, status, is_active (all/1/0), new, sort_by, sort_order, per_page
+         */
+        $search = $request->filled('search')
+            ? $request->search
+            : ($request->filled('keyword') ? $request->keyword : null);
+
+        $category = $request->filled('category')
+            ? $request->category
+            : ($request->filled('category_id') ? $request->category_id : null);
+
+        // Search by name
+        if (!empty($search)) {
+            $query->where('name', 'like', '%' . $search . '%');
+        }
+
+        // Filter by category (main: 'all' | id)
+        if (!empty($category) && $category !== 'all') {
+            $query->where('category_id', $category);
+        }
+
+        // Filter by status (main: 'all' | value)
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+
+        /**
+         * Filter by is_active
+         * - main: is_active = 'all' | '1' | '0'
+         * - HEAD: is_active = 1/0 (hoặc true/false)
+         */
+        if ($request->filled('is_active')) {
+            if ($request->is_active !== 'all') {
+                // Nếu là '1'/'0' thì convert bool, nếu là số/bool thì vẫn ok
+                $isActive = ($request->is_active === '1' || $request->is_active === 1 || $request->is_active === true || $request->is_active === 'true');
+                if ($request->is_active === '0' || $request->is_active === 0 || $request->is_active === false || $request->is_active === 'false') {
+                    $isActive = false;
+                }
+                $query->where('is_active', $isActive);
+            }
+        }
+
+        // Filter by new products (main: new = 'all' | '1' | '0')
+        if ($request->filled('new') && $request->new !== 'all') {
+            $query->where('new', $request->new == '1');
+        }
+
+        // Sorting
+        $sortBy = $request->get('sort_by', 'id');
+        $sortOrder = $request->get('sort_order', 'desc');
+
+        $allowedSorts = ['id', 'name', 'price', 'quantity', 'created_at'];
+        if (in_array($sortBy, $allowedSorts)) {
+            $query->orderBy($sortBy, $sortOrder);
+        } else {
+            $query->orderBy('id', 'desc');
+        }
+
+        // Pagination
+        $perPage = $request->get('per_page', 15);
+        $products = $query->paginate($perPage)->withQueryString();
+
+        // Categories for filter dropdown
+        $categories = [
+            1 => 'Nguyên phụ liệu',
+            2 => 'Đồ trang trí',
+            3 => 'Thời trang len',
+            4 => 'Combo tự làm',
+            5 => 'Sách hướng dẫn',
+            6 => 'Thú bông len'
+        ];
+
+        return $this->view('admin.products.index_simple', compact('products', 'categories'));
     }
-
-    // 🗂 FILTER theo danh mục
-    if ($request->filled('category_id')) {
-        $query->where('category_id', $request->category_id);
-    }
-
-    // 🔘 FILTER theo trạng thái
-    if ($request->filled('is_active')) {
-        $query->where('is_active', $request->is_active);
-    }
-
-    // 📄 PAGINATION + giữ query
-    $products = $query->paginate(10)->appends($request->all());
-
-    $categories = [
-        1 => 'Nguyên phụ liệu',
-        2 => 'Đồ trang trí',
-        3 => 'Thời trang len',
-        4 => 'Combo tự làm',
-        5 => 'Sách hướng dẫn',
-        6 => 'Thú bông len',
-    ];
-
-    return view('admin.products.index_simple', compact('products', 'categories'));
-}
-
 
     // 💚 API load danh sách với search + filter + paginate
     public function list(Request $request)
@@ -54,9 +100,9 @@ class ProductController extends Controller
         // Search by name or description
         if ($request->filled('search')) {
             $searchTerm = $request->search;
-            $query->where(function($q) use ($searchTerm) {
+            $query->where(function ($q) use ($searchTerm) {
                 $q->where('name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('description', 'like', '%' . $searchTerm . '%');
+                    ->orWhere('description', 'like', '%' . $searchTerm . '%');
             });
         }
 
@@ -96,7 +142,7 @@ class ProductController extends Controller
         // Sorting
         $sortBy = $request->get('sort_by', 'id');
         $sortOrder = $request->get('sort_order', 'desc');
-        
+
         $allowedSorts = ['id', 'name', 'price', 'quantity', 'created_at'];
         if (in_array($sortBy, $allowedSorts)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -141,14 +187,14 @@ class ProductController extends Controller
     // 💚 2) Form thêm sản phẩm
     public function create()
     {
-        return view('admin.products.create');
+        return $this->view('admin.products.create');
     }
 
     // 💚 Form sửa sản phẩm
     public function edit($id)
     {
         $product = Product::findOrFail($id);
-        return view('admin.products.edit_simple', compact('product'));
+        return $this->view('admin.products.edit_simple', compact('product'));
     }
 
     // 💚 3) Lưu sản phẩm
@@ -202,7 +248,7 @@ class ProductController extends Controller
 
         try {
             Product::whereIn('id', $request->ids)->delete();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Đã xóa ' . count($request->ids) . ' sản phẩm thành công!'
@@ -274,7 +320,6 @@ class ProductController extends Controller
             $product->update($updateData);
 
             return redirect()->route('admin.products.index')->with('success', 'Cập nhật sản phẩm thành công!');
-            
         } catch (\Exception $e) {
             return back()->with('error', 'Lỗi: ' . $e->getMessage())->withInput();
         }
@@ -284,18 +329,18 @@ class ProductController extends Controller
     public function quickSearch(Request $request)
     {
         $query = $request->get('q', '');
-        
+
         if (strlen($query) < 2) {
             return response()->json(['results' => []]);
         }
 
         $products = Product::where('name', 'like', '%' . $query . '%')
-                          ->select('id', 'name', 'price', 'image')
-                          ->limit(10)
-                          ->get();
+            ->select('id', 'name', 'price', 'image')
+            ->limit(10)
+            ->get();
 
         return response()->json([
-            'results' => $products->map(function($product) {
+            'results' => $products->map(function ($product) {
                 return [
                     'id' => $product->id,
                     'text' => $product->name,
@@ -318,9 +363,9 @@ class ProductController extends Controller
             'new_products' => Product::where('new', 1)->count(),
             'low_stock' => Product::where('quantity', '<=', 5)->count(),
             'categories' => Product::selectRaw('category_id, COUNT(*) as count')
-                                  ->groupBy('category_id')
-                                  ->get()
-                                  ->pluck('count', 'category_id')
+                ->groupBy('category_id')
+                ->get()
+                ->pluck('count', 'category_id')
         ];
 
         return response()->json($stats);

@@ -94,6 +94,13 @@
             font-weight: 600;
         }
         
+        .rating-filter-btn.bg-primary,
+        .sold-filter-btn.bg-primary {
+            background: #FAC638 !important;
+            color: #1a1a1a !important;
+            border-color: #FAC638 !important;
+        }
+        
         .rating-stars {
             color: #FAC638;
         }
@@ -176,6 +183,58 @@
                 <!-- Categories will be loaded here -->
             </div>
             
+            <!-- Advanced Filters -->
+            <div class="mb-4">
+                <button id="filterBtn" class="text-primary text-sm flex items-center gap-1 hover:text-primary/80 transition-colors mb-3">
+                    Bộ lọc nâng cao
+                    <span class="material-symbols-outlined text-sm" id="filterIcon">expand_more</span>
+                </button>
+                
+                <div id="advancedFilters" class="hidden space-y-3 bg-surface-dark/50 rounded-xl p-4">
+                    <!-- Rating Filter -->
+                    <div>
+                        <label class="text-white text-sm font-medium mb-2 block">Đánh giá tối thiểu</label>
+                        <div class="flex gap-2">
+                            <button class="rating-filter-btn px-3 py-2 rounded-lg text-sm border border-gray-600 text-white hover:border-primary transition-colors" data-rating="">
+                                Tất cả
+                            </button>
+                            <button class="rating-filter-btn px-3 py-2 rounded-lg text-sm border border-gray-600 text-white hover:border-primary transition-colors" data-rating="4">
+                                4⭐+
+                            </button>
+                            <button class="rating-filter-btn px-3 py-2 rounded-lg text-sm border border-gray-600 text-white hover:border-primary transition-colors" data-rating="4.5">
+                                4.5⭐+
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Sold Filter -->
+                    <div>
+                        <label class="text-white text-sm font-medium mb-2 block">Số lượt mua tối thiểu</label>
+                        <div class="flex gap-2">
+                            <button class="sold-filter-btn px-3 py-2 rounded-lg text-sm border border-gray-600 text-white hover:border-primary transition-colors" data-sold="">
+                                Tất cả
+                            </button>
+                            <button class="sold-filter-btn px-3 py-2 rounded-lg text-sm border border-gray-600 text-white hover:border-primary transition-colors" data-sold="10">
+                                10+ lượt
+                            </button>
+                            <button class="sold-filter-btn px-3 py-2 rounded-lg text-sm border border-gray-600 text-white hover:border-primary transition-colors" data-sold="50">
+                                50+ lượt
+                            </button>
+                            <button class="sold-filter-btn px-3 py-2 rounded-lg text-sm border border-gray-600 text-white hover:border-primary transition-colors" data-sold="100">
+                                100+ lượt
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Clear Filters -->
+                    <div class="pt-2">
+                        <button id="clearFilters" class="text-gray-400 text-sm hover:text-white transition-colors">
+                            Xóa tất cả bộ lọc
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
             <div class="flex items-center justify-between mb-4">
                 <p class="text-white text-sm">Hiển thị <span id="productCount">0</span> sản phẩm</p>
                 <button id="sortBtn" class="text-primary text-sm flex items-center gap-1 hover:text-primary/80 transition-colors">
@@ -202,6 +261,12 @@
                         </button>
                         <button class="sort-option w-full text-left p-4 bg-card-dark rounded-xl text-white hover:bg-gray-600 transition-colors" data-sort="price-desc">
                             Giá: Cao đến thấp
+                        </button>
+                        <button class="sort-option w-full text-left p-4 bg-card-dark rounded-xl text-white hover:bg-gray-600 transition-colors" data-sort="rating-desc">
+                            Đánh giá cao nhất
+                        </button>
+                        <button class="sort-option w-full text-left p-4 bg-card-dark rounded-xl text-white hover:bg-gray-600 transition-colors" data-sort="sold-desc">
+                            Bán chạy nhất
                         </button>
                         <button class="sort-option w-full text-left p-4 bg-card-dark rounded-xl text-white hover:bg-gray-600 transition-colors" data-sort="name-asc">
                             Tên: A-Z
@@ -256,6 +321,8 @@
         let currentPage = 1;
         let currentCategory = 'all';
         let currentSort = 'default';
+        let currentMinRating = '';
+        let currentMinSold = '';
         let products = [];
         let categories = [];
 
@@ -284,6 +351,45 @@
                 currentSort = $(this).data('sort');
                 loadProducts(); // Reload with new sort
                 hideSortDropdown();
+            });
+            
+            // Advanced filters toggle
+            $('#filterBtn').click(function() {
+                const filters = $('#advancedFilters');
+                const icon = $('#filterIcon');
+                
+                if (filters.hasClass('hidden')) {
+                    filters.removeClass('hidden');
+                    icon.text('expand_less');
+                } else {
+                    filters.addClass('hidden');
+                    icon.text('expand_more');
+                }
+            });
+            
+            // Rating filter buttons
+            $('.rating-filter-btn').click(function() {
+                $('.rating-filter-btn').removeClass('bg-primary text-background-dark').addClass('text-white');
+                $(this).addClass('bg-primary text-background-dark').removeClass('text-white');
+                currentMinRating = $(this).data('rating');
+                loadProducts();
+            });
+            
+            // Sold filter buttons
+            $('.sold-filter-btn').click(function() {
+                $('.sold-filter-btn').removeClass('bg-primary text-background-dark').addClass('text-white');
+                $(this).addClass('bg-primary text-background-dark').removeClass('text-white');
+                currentMinSold = $(this).data('sold');
+                loadProducts();
+            });
+            
+            // Clear filters
+            $('#clearFilters').click(function() {
+                currentMinRating = '';
+                currentMinSold = '';
+                $('.rating-filter-btn, .sold-filter-btn').removeClass('bg-primary text-background-dark').addClass('text-white');
+                $('.rating-filter-btn[data-rating=""], .sold-filter-btn[data-sold=""]').addClass('bg-primary text-background-dark').removeClass('text-white');
+                loadProducts();
             });
         });
 
@@ -345,7 +451,7 @@
 
         function loadCategories() {
             $.ajax({
-                url: '/api/categories',
+                url: '/api/product-categories',
                 method: 'GET',
                 success: function(response) {
                     categories = response.categories || [];
@@ -382,14 +488,26 @@
         function loadProducts() {
             $('#loading').show();
             
+            const requestData = {
+                category: currentCategory,
+                page: currentPage,
+                sort: currentSort
+            };
+            
+            // Thêm filter rating nếu có
+            if (currentMinRating) {
+                requestData.min_rating = currentMinRating;
+            }
+            
+            // Thêm filter sold nếu có
+            if (currentMinSold) {
+                requestData.min_sold = currentMinSold;
+            }
+            
             $.ajax({
                 url: '/api/products',
                 method: 'GET',
-                data: {
-                    category: currentCategory,
-                    page: currentPage,
-                    sort: currentSort
-                },
+                data: requestData,
                 success: function(response) {
                     products = response.products || [];
                     renderProducts();
@@ -491,21 +609,40 @@
             const price = parseFloat(product.price) || 0;
             const formattedPrice = price.toLocaleString('vi-VN');
             
+            // Hiển thị rating thực tế
+            const rating = parseFloat(product.average_rating) || 0;
+            const reviewCount = product.review_count || 0;
+            const totalSold = product.total_sold || 0;
+            
+            // Tạo sao dựa trên rating thực tế
+            let starsHtml = '';
+            for (let i = 1; i <= 5; i++) {
+                if (i <= Math.floor(rating)) {
+                    starsHtml += '★';
+                } else if (i === Math.ceil(rating) && rating % 1 >= 0.5) {
+                    starsHtml += '☆'; // Half star (có thể thay bằng icon khác)
+                } else {
+                    starsHtml += '☆';
+                }
+            }
+            
             return `
                 <div class="product-card rounded-xl p-3 cursor-pointer" onclick="viewProduct(${product.id})">
                     <div class="relative mb-3">
                         <img src="${imageUrl}" alt="${product.name}" class="product-image" 
                              onerror="this.src='https://via.placeholder.com/200x120/${bgColor.substring(1)}/FFFFFF?text=${encodeURIComponent(product.name.substring(0, 2))}'">
                         ${product.is_new ? '<div class="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">Mới</div>' : ''}
+                        ${totalSold > 0 ? `<div class="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">${totalSold} đã bán</div>` : ''}
                     </div>
                     
                     <div class="mb-2">
                         <h3 class="text-white font-medium text-sm mb-1 line-clamp-2">${product.name}</h3>
                         <div class="flex items-center gap-1 mb-1">
-                            <div class="rating-stars flex">
-                                ${'★'.repeat(4)}${'☆'.repeat(1)}
+                            <div class="rating-stars flex text-xs">
+                                ${starsHtml}
                             </div>
-                            <span class="text-gray-400 text-xs">4.0</span>
+                            <span class="text-gray-400 text-xs">${rating > 0 ? rating.toFixed(1) : '0.0'}</span>
+                            ${reviewCount > 0 ? `<span class="text-gray-500 text-xs">(${reviewCount})</span>` : ''}
                         </div>
                         <p class="text-primary font-bold text-sm">${formattedPrice}đ</p>
                     </div>

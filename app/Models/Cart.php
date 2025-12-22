@@ -14,11 +14,11 @@ class Cart extends Model
     protected $fillable = [
         'user_id',
         'product_id',
+        'variant_id',
         'quantity',
         'price_at_time',
         'variant_info',
-        'session_id',
-         'variant_id'
+        'session_id'
     ];
 
     protected $casts = [

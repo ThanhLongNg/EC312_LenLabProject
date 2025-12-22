@@ -10,7 +10,7 @@ use App\Models\OrderItem;
 use App\Models\User;
 use App\Models\Product;
 
-class OrderController extends Controller
+class OrderController extends BaseAdminController
 {
     // Trang danh sách đơn hàng + lọc
     public function index(Request $request)
@@ -34,7 +34,7 @@ class OrderController extends Controller
             ->paginate(10)
             ->withQueryString(); // giữ filter khi bấm pagination
 
-        return view('admin.orders.index_simple', compact('orders'));
+        return $this->view('admin.orders.index_simple', compact('orders'));
     }
 
     // API để DataTable load danh sách đơn hàng
@@ -69,7 +69,7 @@ class OrderController extends Controller
             ->where('order_id', $id)
             ->firstOrFail();
 
-        return view('admin.orders.detail_simple', compact('order'));
+        return $this->view('admin.orders.detail_simple', compact('order'));
     }
 
     // Xóa đơn hàng
@@ -93,7 +93,7 @@ class OrderController extends Controller
     public function create()
     {
         $products = Product::all();
-        return view('admin.orders.create_simple', compact('products'));
+        return $this->view('admin.orders.create_simple', compact('products'));
     }
 
     // Lưu đơn hàng từ AddOrder

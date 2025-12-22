@@ -3,7 +3,7 @@
     <div class="h-16 flex items-center px-6 border-b border-border-light dark:border-border-dark bg-white dark:bg-surface-dark">
         <div class="flex items-center gap-3">
             <span class="material-icons-round text-primary text-3xl">gesture</span>
-            <h1 class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">LENLAB</h1>
+            <h1 class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">{{ $siteName ?? 'Lenlab Official' }}</h1>
         </div>
     </div>
 
@@ -32,8 +32,9 @@
                         </a>
                     </li>
                     <li>
-                        <a class="block px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
-                           href="#">
+                        <a class="block px-3 py-1.5 text-sm transition-colors
+                           {{ request()->routeIs('admin.ui_config') ? 'text-primary font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary' }}"
+                           href="{{ route('admin.ui_config') }}">
                             UI Configuration
                         </a>
                     </li>
@@ -43,9 +44,9 @@
             {{-- Sản phẩm --}}
             <li>
                 <div class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors
-                    {{ request()->routeIs('admin.products.*') ? 'text-primary bg-primary/10 dark:bg-primary/20 font-semibold' : 'text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-gray-800 group' }}">
+                    {{ request()->routeIs('admin.products.*') || request()->routeIs('admin.digital-products.*') ? 'text-primary bg-primary/10 dark:bg-primary/20 font-semibold' : 'text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-gray-800 group' }}">
                     <span class="material-icons-round
-                        {{ request()->routeIs('admin.products.*') ? 'text-primary' : 'text-gray-400 group-hover:text-primary' }}">
+                        {{ request()->routeIs('admin.products.*') || request()->routeIs('admin.digital-products.*') ? 'text-primary' : 'text-gray-400 group-hover:text-primary' }}">
                         inventory_2
                     </span>
                     <span>Sản phẩm</span>
@@ -60,8 +61,9 @@
                         </a>
                     </li>
                     <li>
-                        <a class="block px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
-                           href="#">
+                        <a class="block px-3 py-1.5 text-sm transition-colors
+                           {{ request()->routeIs('admin.digital-products.*') ? 'text-primary font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary' }}"
+                           href="{{ route('admin.digital-products.index') }}">
                             Sản phẩm số
                         </a>
                     </li>
@@ -199,7 +201,7 @@
             </h3>
 
             <a class="flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors group"
-               href="#">
+               href="{{ route('admin.ui_config') }}">
                 <span class="material-icons-round text-gray-400 group-hover:text-primary transition-colors">settings</span>
                 <span>Cấu hình chung</span>
             </a>

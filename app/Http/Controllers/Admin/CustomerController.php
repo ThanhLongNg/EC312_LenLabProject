@@ -7,19 +7,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
 
-class CustomerController extends Controller
+class CustomerController extends BaseAdminController
 {
     // Danh sách khách hàng
     public function index()
     {
         $customers = User::all();
-        return view('admin.customers.index_simple', compact('customers'));
+        return $this->view('admin.customers.index_simple', compact('customers'));
     }
 
     // Form thêm khách hàng
     public function create()
     {
-        return view('admin.customers.create_simple');
+        return $this->view('admin.customers.create_simple');
     }
 
     // Lưu khách hàng mới

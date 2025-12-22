@@ -11,7 +11,7 @@ class AdminOnly
     {
         // Kiểm tra đã đăng nhập bằng guard admin chưa
         if (!auth()->guard('admin')->check()) {
-            return redirect('/login')->with('error', 'Bạn cần đăng nhập với tài khoản Admin');
+            return redirect()->route('admin.login')->with('error', 'Bạn cần đăng nhập với tài khoản Admin');
         }
 
         return $next($request);
