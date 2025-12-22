@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 
-class DashboardController extends Controller
+class DashboardController extends BaseAdminController
 {
     public function index()
     {
@@ -29,7 +29,8 @@ class DashboardController extends Controller
             }
         }
 
-        return view('admin.dashboard_modern', [
+        // Pass required variables for admin layout
+        return $this->view('admin.dashboard_modern', [
             'customerCount' => $customerCount,
             'productCount' => $productCount,
             'orderCount' => $orderCount,

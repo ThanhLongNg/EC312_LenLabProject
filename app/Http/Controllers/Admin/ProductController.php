@@ -8,7 +8,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Support\Facades\Storage;
 
-class ProductController extends Controller
+class ProductController extends BaseAdminController
 {
     // 💚 1) Trang danh sách sản phẩm với search + filter + paginate
     public function index(Request $request)
@@ -65,7 +65,7 @@ class ProductController extends Controller
             6 => 'Thú bông len'
         ];
 
-        return view('admin.products.index_simple', compact('products', 'categories'));
+        return $this->view('admin.products.index_simple', compact('products', 'categories'));
     }
 
     // 💚 API load danh sách với search + filter + paginate
@@ -163,14 +163,14 @@ class ProductController extends Controller
     // 💚 2) Form thêm sản phẩm
     public function create()
     {
-        return view('admin.products.create');
+        return $this->view('admin.products.create');
     }
 
     // 💚 Form sửa sản phẩm
     public function edit($id)
     {
         $product = Product::findOrFail($id);
-        return view('admin.products.edit_simple', compact('product'));
+        return $this->view('admin.products.edit_simple', compact('product'));
     }
 
     // 💚 3) Lưu sản phẩm

@@ -1,13 +1,13 @@
 @extends('admin.layout')
 
-@section('title', getSiteName() . ' - Quản lý sản phẩm số')
+@section('title', ($siteName ?? 'Lenlab Official') . ' - Quản lý sản phẩm số')
 
 @php
     // Variables for header
     $pageTitle = 'Sản phẩm số';
     $pageHeading = 'Quản lý sản phẩm số';
     $pageDescription = 'Quản lý sản phẩm số';
-    $createUrl = '#';
+    $createUrl = '/admin/digital-products';
 @endphp
 
 @section('content')

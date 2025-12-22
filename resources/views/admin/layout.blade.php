@@ -4,7 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'LENLAB Admin')</title>
+    <title>@yield('title', ($siteName ?? 'Lenlab Official') . ' - Admin')</title>
+
+    {{-- Favicon --}}
+    <link rel="icon" type="image/x-icon" href="{{ $faviconUrl ?? asset('favicon.ico') }}">
+
+    {{-- Dynamic CSS from settings --}}
+    <style>
+        {!! $dynamicCss ?? '' !!}
+    </style>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -14,8 +22,8 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#D1A272',
-                        'primary-hover': '#b88a5d',
+                        primary: '{{ $primaryColor ?? "#D1A272" }}',
+                        'primary-hover': '{{ \App\Helpers\SettingsHelper::adjustBrightness($primaryColor ?? "#D1A272", -20) }}',
                         secondary: '#64748b',
                         success: '#10b981',
                         danger: '#ef4444',
