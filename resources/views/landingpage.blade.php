@@ -4,9 +4,16 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @auth
+        <meta name="user-id" content="{{ auth()->id() }}">
+        <meta name="user-name" content="{{ auth()->user()->name }}">
+        <meta name="user-email" content="{{ auth()->user()->email }}">
+    @endauth
     <title>LENLAB Homepage</title>
     <link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&family=Noto+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script id="tailwind-config">
         tailwind.config = {
@@ -411,6 +418,42 @@
             }
         }
     </style>
+    <style>
+        /* CSS Variables for Chatbot */
+        :root {
+            --primary: #FAC638;
+            --background-dark: #231e0f;
+        }
+        
+        /* Chatbot styles */
+        .bg-primary {
+            background-color: var(--primary) !important;
+        }
+        
+        .text-primary {
+            color: var(--primary) !important;
+        }
+        
+        .text-background-dark {
+            color: var(--background-dark) !important;
+        }
+        
+        .hover\:bg-primary\/90:hover {
+            background-color: rgba(250, 198, 56, 0.9) !important;
+        }
+        
+        .text-primary {
+            color: #FAC638 !important;
+        }
+        
+        .text-background-dark {
+            color: #231e0f !important;
+        }
+        
+        .hover\:bg-primary\/90:hover {
+            background-color: rgba(250, 198, 56, 0.9) !important;
+        }
+    </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark font-display min-h-screen flex flex-col antialiased selection:bg-primary selection:text-background-dark">
 
@@ -455,6 +498,8 @@
         </div>
     </div>
 </header>
+
+
 @php
     $latestPosts = \App\Models\Post::where('is_published', true)
         ->orderByDesc('published_at')
@@ -515,13 +560,13 @@
 
     <!-- Winter Campaign Section -->
     <section class="px-4 py-2">
-        <div class="relative w-full rounded-2xl overflow-hidden bg-primary/20">
+        <div class="relative w-full rounded-2xl overflow-hidden bg-primary/20 cursor-pointer hover:bg-primary/30 transition-colors" onclick="window.location.href='/san-pham-so'">
             <div class="absolute inset-0 opacity-20 bg-[radial-gradient(#FAC638_1px,transparent_1px)] [background-size:16px_16px]"></div>
             <div class="relative flex flex-row items-center justify-between p-6">
                 <div class="flex flex-col gap-2 max-w-[60%]">
-                    <span class="inline-block px-2 py-0.5 w-fit rounded bg-primary text-background-dark text-[10px] font-bold uppercase tracking-wider">Campaign</span>
-                    <h2 class="text-2xl font-black text-gray-900 dark:text-white uppercase leading-none">Mùa đông <br/><span class="text-primary">Ấm áp</span></h2>
-                    <p class="text-xs text-gray-600 dark:text-gray-300 mt-1">Giảm 15% cho đơn hàng đầu tiên.</p>
+                    <span class="inline-block px-2 py-0.5 w-fit rounded bg-primary text-background-dark text-[10px] font-bold uppercase tracking-wider">KHÁM PHÁ</span>
+                    <h2 class="text-2xl font-black text-gray-900 dark:text-white uppercase leading-none">NEW DIGITAL PRODUCTS<br/><span class="text-primary">HOT HIT</span></h2>
+                    <p class="text-xs text-gray-600 dark:text-gray-300 mt-1">Với bảng chart đầy đủ và chi tiết nhất.</p>
                 </div>
                 <div class="h-24 w-24 flex-shrink-0 rotate-12 rounded-xl overflow-hidden border-2 border-white/20 shadow-lg">
                     @php
@@ -595,7 +640,7 @@
                 <ul class="flex flex-col gap-2 text-sm text-gray-500 dark:text-gray-400">
                     <li><a class="hover:text-primary transition-colors" href="/gioi-thieu">Về chúng tôi</a></li>
                     <li><a class="hover:text-primary transition-colors" href="/san-pham">Sản phẩm</a></li>
-                    <li><a class="hover:text-primary transition-colors" href="#">Blog</a></li>
+                    <li><a class="hover:text-primary transition-colors" href="{{ route('blog.index') }}">Blog</a></li>
                     <li><a class="hover:text-primary transition-colors" href="#">Liên hệ</a></li>
                 </ul>
             </div>
@@ -895,7 +940,7 @@ $(document).ready(function() {
                                 <span class="text-white font-medium">Về chúng tôi</span>
                             </a>
                                                             
-                            <a href="#" class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/10 transition-all duration-200 group">
+                            <a href="{{ route('blog.index') }}" class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/10 transition-all duration-200 group">
                                 <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">receipt_long</span>
                                 <span class="text-white font-medium">Tin tức & Blog</span>
                             </a>
@@ -972,32 +1017,6 @@ $(document).ready(function() {
         }
     });
     
-    // Scroll animations and effects
-    function initScrollAnimations() {
-        // Intersection Observer for scroll animations
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-        
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('animate-in');
-                    entry.target.classList.remove('animate-out');
-                } else {
-                    entry.target.classList.remove('animate-in');
-                    entry.target.classList.add('animate-out');
-                }
-            });
-        }, observerOptions);
-        
-        // Observe all sections
-        document.querySelectorAll('section, .product-card, .category-item').forEach(el => {
-            observer.observe(el);
-        });
-    }
-    
     // Floating/hover effects
     function initHoverEffects() {
         // Product cards floating effect
@@ -1022,39 +1041,6 @@ $(document).ready(function() {
         });
     }
     
-    // Parallax effect for hero section
-    function initParallaxEffect() {
-        $(window).scroll(function() {
-            const scrolled = $(this).scrollTop();
-            const parallax = scrolled * 0.5;
-            const windowHeight = $(window).height();
-            const documentHeight = $(document).height();
-            const scrollPercent = (scrolled / (documentHeight - windowHeight)) * 100;
-            
-            // Update scroll progress indicator
-            $('#scrollProgress').css('width', scrollPercent + '%');
-            
-            // Hero background parallax
-            if (scrolled < windowHeight) {
-                $('.hero-section .absolute.inset-0').css('transform', `translateY(${parallax}px)`);
-            }
-            
-            // Header backdrop blur effect
-            if (scrolled > 50) {
-                $('header').addClass('backdrop-blur-xl bg-background-light/95 dark:bg-background-dark/95 shadow-lg');
-            } else {
-                $('header').removeClass('backdrop-blur-xl bg-background-light/95 dark:bg-background-dark/95 shadow-lg');
-            }
-            
-            // Floating elements
-            $('.animate-float').each(function() {
-                const speed = $(this).data('speed') || 0.5;
-                const yPos = -(scrolled * speed);
-                $(this).css('transform', `translateY(${yPos}px)`);
-            });
-        });
-    }
-    
     // Smooth scroll for internal links
     function initSmoothScroll() {
         $('a[href^="#"]').click(function(e) {
@@ -1065,37 +1051,6 @@ $(document).ready(function() {
                     scrollTop: target.offset().top - 80
                 }, 800, 'easeInOutCubic');
             }
-        });
-    }
-    
-    // Loading animations
-    function initLoadingAnimations() {
-        // Stagger animation for product cards
-        $('#featuredProducts').on('DOMNodeInserted', function() {
-            $(this).find('.product-item').each(function(index) {
-                $(this).css({
-                    'animation-delay': `${index * 100}ms`,
-                    'opacity': '0',
-                    'transform': 'translateY(20px)'
-                }).animate({
-                    'opacity': 1,
-                    'transform': 'translateY(0)'
-                }, 600);
-            });
-        });
-        
-        // Categories loading animation
-        $('#categoriesContainer').on('DOMNodeInserted', function() {
-            $(this).find('.category-item').each(function(index) {
-                $(this).css({
-                    'animation-delay': `${index * 80}ms`,
-                    'opacity': '0',
-                    'transform': 'scale(0.8)'
-                }).animate({
-                    'opacity': 1,
-                    'transform': 'scale(1)'
-                }, 500);
-            });
         });
     }
     
@@ -1129,23 +1084,21 @@ $(document).ready(function() {
     
     // Page loading animation
     function initPageLoading() {
-        // Add loading class to body
-        $('body').addClass('loading');
-        
-        // Remove loading class when everything is loaded
-        $(window).on('load', function() {
-            setTimeout(() => {
-                $('body').removeClass('loading').addClass('loaded');
-                
-                // Trigger entrance animations
-                $('.animate-on-load').each(function(index) {
-                    setTimeout(() => {
-                        $(this).addClass('animate-in');
-                    }, index * 100);
-                });
-            }, 500);
-        });
-    }
+    $('body').addClass('loading');
+
+    // Remove loading as soon as DOM is ready (safe)
+    $(document).ready(function () {
+        setTimeout(() => {
+            $('body').removeClass('loading').addClass('loaded');
+        }, 300);
+    });
+
+    // Failsafe: force remove after 2s (never stuck)
+    setTimeout(() => {
+        $('body').removeClass('loading').addClass('loaded');
+    }, 2000);
+}
+
     
     // Add ripple effect to buttons
     function addRippleEffect() {
@@ -1197,11 +1150,8 @@ $(document).ready(function() {
     loadCategories();
     loadFeaturedProducts();
     updateCartCount();
-    initScrollAnimations();
     initHoverEffects();
-    initParallaxEffect();
     initSmoothScroll();
-    initLoadingAnimations();
     initTouchGestures();
     addRippleEffect();
     addMagneticEffect();
@@ -1285,6 +1235,9 @@ $(document).on('keydown', function(e) {
         </button>
     </div>
 </div>
+
+<!-- Chatbot Widget -->
+@include('components.chatbot')
 
 </body>
 </html>

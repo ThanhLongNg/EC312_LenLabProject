@@ -112,8 +112,12 @@
 
             {{-- Chat box --}}
             <li>
-                <div class="flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer transition-colors group">
-                    <span class="material-icons-round text-gray-400 group-hover:text-primary transition-colors">chat</span>
+                <div class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors group
+                    {{ request()->routeIs('admin.chatbot.*') ? 'text-primary bg-primary/10 dark:bg-primary/20 font-semibold' : 'text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+                    <span class="material-icons-round transition-colors
+                        {{ request()->routeIs('admin.chatbot.*') ? 'text-primary' : 'text-gray-400 group-hover:text-primary' }}">
+                        chat
+                    </span>
                     <span class="flex-1">Chat box</span>
                     <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
                         5
@@ -121,15 +125,38 @@
                 </div>
                 <ul class="space-y-1 pl-11 mt-1">
                     <li>
-                        <a class="block px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
-                           href="#">
-                            Tin nhắn khách hàng
+                        <a class="block px-3 py-1.5 text-sm transition-colors
+                           {{ request()->routeIs('admin.faq.*') ? 'text-primary font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary' }}"
+                           href="{{ route('admin.faq.index') }}">
+                            Quản lý FAQ
                         </a>
                     </li>
                     <li>
-                        <a class="block px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
-                           href="#">
-                            Kịch bản Chatbot
+                        <a class="block px-3 py-1.5 text-sm transition-colors
+                           {{ request()->routeIs('admin.chatbot.chat-support') ? 'text-primary font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary' }}"
+                           href="{{ route('admin.chatbot.chat-support') }}">
+                            Chat Hỗ Trợ Khách Hàng
+                        </a>
+                    </li>
+                    <li>
+                        <a class="block px-3 py-1.5 text-sm transition-colors
+                           {{ request()->routeIs('admin.chatbot.custom-requests') ? 'text-primary font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary' }}"
+                           href="{{ route('admin.chatbot.custom-requests') }}">
+                            Yêu cầu sản phẩm riêng
+                        </a>
+                    </li>
+                    <li>
+                        <a class="block px-3 py-1.5 text-sm transition-colors
+                           {{ request()->routeIs('admin.chatbot.chat-logs') ? 'text-primary font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary' }}"
+                           href="{{ route('admin.chatbot.chat-logs') }}">
+                            Lịch sử chat
+                        </a>
+                    </li>
+                    <li>
+                        <a class="block px-3 py-1.5 text-sm transition-colors
+                           {{ request()->routeIs('admin.chatbot.analytics') ? 'text-primary font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary' }}"
+                           href="{{ route('admin.chatbot.analytics') }}">
+                            Thống kê chatbot
                         </a>
                     </li>
                 </ul>

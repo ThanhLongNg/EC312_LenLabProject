@@ -4,9 +4,16 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @auth
+        <meta name="user-id" content="{{ auth()->id() }}">
+        <meta name="user-name" content="{{ auth()->user()->name }}">
+        <meta name="user-email" content="{{ auth()->user()->email }}">
+    @endauth
     <title>Tổng quan sản phẩm - LENLAB</title>
     <link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&family=Noto+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script id="tailwind-config">
@@ -29,6 +36,28 @@
         }
     </script>
     <style>
+        /* CSS Variables for Chatbot */
+        :root {
+            --primary: #FAC638;
+            --background-dark: #1a1a1a;
+        }
+        
+        .bg-primary {
+            background-color: var(--primary) !important;
+        }
+        
+        .text-primary {
+            color: var(--primary) !important;
+        }
+        
+        .text-background-dark {
+            color: var(--background-dark) !important;
+        }
+        
+        .hover\:bg-primary\/90:hover {
+            background-color: rgba(250, 198, 56, 0.9) !important;
+        }
+        
         body {
             font-family: 'Spline Sans', sans-serif;
             background: #1a1a1a;
@@ -414,12 +443,16 @@
                                     <span class="material-symbols-outlined text-primary">shopping_bag</span>
                                     <span class="text-white font-medium">Sản phẩm</span>
                                 </a>
+                                <a href="/san-pham-so" class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/10 transition-all duration-200 group">
+                                    <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">cloud_download</span>
+                                    <span class="text-white font-medium">Sản phẩm số</span>
+                                </a>
                                 <a href="/gioi-thieu" class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/10 transition-all duration-200 group">
                                     <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">info</span>
                                     <span class="text-white font-medium">Giới thiệu</span>
                                 </a>
-                                <a href="#" class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/10 transition-all duration-200 group">
-                                    <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">shopping_cart</span>
+                                <a href="{{ route('blog.index') }}" class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/10 transition-all duration-200 group">
+                                    <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">article</span>
                                     <span class="text-white font-medium">Tin tức & Blog</span>
                                 </a>
                             </nav>
@@ -450,22 +483,29 @@
         }
 
         function loadCategories() {
+            console.log('Loading categories...');
             $.ajax({
                 url: '/api/product-categories',
                 method: 'GET',
                 success: function(response) {
+                    console.log('Categories loaded successfully:', response);
                     categories = response.categories || [];
                     renderCategoryTabs();
                 },
-                error: function() {
-                    console.error('Không thể tải danh mục');
+                error: function(xhr, status, error) {
+                    console.error('Không thể tải danh mục:', xhr.responseText, status, error);
                 }
             });
         }
 
         function renderCategoryTabs() {
+            console.log('Rendering category tabs with categories:', categories);
             const tabsContainer = $('#categoryTabs');
             
+            // Clear existing tabs except "Tất cả"
+            tabsContainer.find('.filter-btn:not([data-category="all"])').remove();
+            
+            // Add category tabs
             categories.forEach(function(category) {
                 const tab = `
                     <button class="filter-btn px-4 py-2 rounded-full text-sm text-white whitespace-nowrap" data-category="${category.id}">
@@ -477,22 +517,31 @@
             
             // Use event delegation for dynamically added buttons
             $('#categoryTabs').off('click').on('click', '.filter-btn', function() {
-                $('.filter-btn').removeClass('active').addClass('text-white');
-                $(this).addClass('active').removeClass('text-white');
+                $('.filter-btn').removeClass('active');
+                $(this).addClass('active');
                 currentCategory = $(this).data('category');
+                if (currentCategory === 'all') {
+                    currentCategory = '';
+                }
                 currentPage = 1;
                 loadProducts();
             });
         }
 
         function loadProducts() {
+            console.log('Loading products...');
+            console.log('Current category:', currentCategory);
             $('#loading').show();
             
             const requestData = {
-                category: currentCategory,
                 page: currentPage,
                 sort: currentSort
             };
+            
+            // Only add category if it's not empty
+            if (currentCategory && currentCategory !== 'all') {
+                requestData.category = currentCategory;
+            }
             
             // Thêm filter rating nếu có
             if (currentMinRating) {
@@ -504,17 +553,21 @@
                 requestData.min_sold = currentMinSold;
             }
             
+            console.log('Request data:', requestData);
+            
             $.ajax({
                 url: '/api/products',
                 method: 'GET',
                 data: requestData,
                 success: function(response) {
+                    console.log('Products loaded successfully:', response);
                     products = response.products || [];
                     renderProducts();
                     updateProductCount();
                     $('#loading').hide();
                 },
-                error: function() {
+                error: function(xhr, status, error) {
+                    console.error('Error loading products:', xhr.responseText, status, error);
                     $('#loading').hide();
                     $('#productsGrid').html('<div class="col-span-2 text-center text-gray-400 py-8">Không thể tải sản phẩm</div>');
                 }
@@ -628,11 +681,15 @@
             
             return `
                 <div class="product-card rounded-xl p-3 cursor-pointer" onclick="viewProduct(${product.id})">
-                    <div class="relative mb-3">
-                        <img src="${imageUrl}" alt="${product.name}" class="product-image" 
-                             onerror="this.src='https://via.placeholder.com/200x120/${bgColor.substring(1)}/FFFFFF?text=${encodeURIComponent(product.name.substring(0, 2))}'">
-                        ${product.is_new ? '<div class="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">Mới</div>' : ''}
+                    <div class="relative mb-3 responsive-image-container">
+                        <img 
+                            src="${imageUrl}" 
+                            alt="${product.name}" 
+                            class="product-image"
+                        />
+                        ${product.is_new ? '<div class="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full z-10">Mới</div>' : ''}
                         ${totalSold > 0 ? `<div class="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">${totalSold} đã bán</div>` : ''}
+                        ${product.has_variants ? '<div class="absolute bottom-2 left-2 bg-primary text-background-dark text-xs px-2 py-1 rounded-full font-medium">Nhiều lựa chọn</div>' : ''}
                     </div>
                     
                     <div class="mb-2">
@@ -647,8 +704,8 @@
                         <p class="text-primary font-bold text-sm">${formattedPrice}đ</p>
                     </div>
                     
-                    <div class="add-btn" onclick="event.stopPropagation(); addToCart(${product.id})">
-                        <span class="material-symbols-outlined text-background-dark text-sm">add</span>
+                    <div class="add-btn" onclick="event.stopPropagation(); addToCart(${product.id}, ${product.has_variants || false}, ${JSON.stringify(product.variants || []).replace(/"/g, '&quot;')})">
+                        <span class="material-symbols-outlined text-background-dark text-sm">shopping_cart</span>
                     </div>
                 </div>
             `;
@@ -662,8 +719,14 @@
             window.location.href = `/san-pham/${productId}`;
         }
 
-        function addToCart(productId) {
+        function addToCart(productId, hasVariants = false, variants = []) {
             @auth
+                // If product has variants, show variant selection modal
+                if (hasVariants && variants.length > 0) {
+                    showVariantSelectionModal(productId, variants);
+                    return;
+                }
+                
                 $.ajaxSetup({
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
@@ -705,6 +768,107 @@
             @endauth
         }
 
+        function showVariantSelectionModal(productId, variants) {
+            let modalHtml = `
+                <div id="variantModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div class="bg-surface-dark rounded-2xl p-6 max-w-md w-full border border-white/10">
+                        <h3 class="text-white font-semibold text-lg mb-4">Chọn phiên bản</h3>
+                        <div class="space-y-3 mb-6">
+            `;
+            
+            variants.forEach((variant, index) => {
+                const variantLabel = variant.variant_name || `${variant.color || ''} ${variant.size || ''}`.trim() || `Phiên bản ${index + 1}`;
+                const priceText = variant.price ? `${parseInt(variant.price).toLocaleString()}đ` : '';
+                
+                modalHtml += `
+                    <div class="variant-option-modal p-3 rounded-xl border border-white/20 cursor-pointer hover:border-primary transition-colors" 
+                         data-variant-id="${variant.id}" data-variant-name="${variantLabel}">
+                        <div class="flex justify-between items-center">
+                            <span class="text-white">${variantLabel}</span>
+                            ${priceText ? `<span class="text-primary font-medium">${priceText}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            modalHtml += `
+                        </div>
+                        <div class="flex gap-3">
+                            <button onclick="closeVariantModal()" class="flex-1 py-2 px-4 rounded-xl border border-white/20 text-white hover:bg-white/10 transition-colors">
+                                Hủy
+                            </button>
+                            <button onclick="addToCartWithVariant(${productId})" class="flex-1 py-2 px-4 rounded-xl bg-primary text-background-dark font-medium hover:bg-primary/90 transition-colors">
+                                Thêm vào giỏ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            $('body').append(modalHtml);
+            
+            // Handle variant selection
+            $('.variant-option-modal').click(function() {
+                $('.variant-option-modal').removeClass('border-primary bg-primary/10');
+                $(this).addClass('border-primary bg-primary/10');
+            });
+            
+            // Select first variant by default
+            $('.variant-option-modal').first().click();
+        }
+
+        function closeVariantModal() {
+            $('#variantModal').remove();
+        }
+
+        function addToCartWithVariant(productId) {
+            const selectedVariant = $('.variant-option-modal.border-primary');
+            if (selectedVariant.length === 0) {
+                alert('Vui lòng chọn phiên bản sản phẩm');
+                return;
+            }
+            
+            const variantId = selectedVariant.data('variant-id');
+            const variantName = selectedVariant.data('variant-name');
+            
+            $.ajaxSetup({
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                }
+            });
+            
+            const cartData = {
+                product_id: productId,
+                variant_id: variantId,
+                variant_name: variantName,
+                quantity: 1
+            };
+            
+            $.post('/api/cart/add', cartData, function(response) {
+                if (response.success) {
+                    closeVariantModal();
+                    // Show success message
+                    const toast = $('<div class="fixed top-4 right-4 bg-primary text-background-dark px-4 py-2 rounded-lg font-medium z-50">✓ Đã thêm vào giỏ hàng!</div>');
+                    $('body').append(toast);
+                    setTimeout(() => {
+                        toast.fadeOut(() => toast.remove());
+                    }, 2000);
+                } else {
+                    console.error('Cart add error:', response);
+                    alert(response.message || 'Có lỗi xảy ra, vui lòng thử lại!');
+                }
+            }).fail(function(xhr, status, error) {
+                console.error('Cart add failed:', xhr.responseText, status, error);
+                let errorMessage = 'Có lỗi xảy ra, vui lòng thử lại!';
+                
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                
+                alert(errorMessage);
+            });
+        }
+
         function changePage(direction) {
             const totalPages = 3; // You can make this dynamic based on total products
             currentPage += direction;
@@ -736,5 +900,8 @@
             changePage(diff);
         });
     </script>
+
+    <!-- Chatbot Widget -->
+    @include('components.chatbot')
 </body>
 </html>

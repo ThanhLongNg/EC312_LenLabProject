@@ -43,11 +43,16 @@ class ProductPageController extends Controller
     public function apiIndex(Request $request)
     {
         try {
+            \Log::info('API Products request:', $request->all());
+            
             $query = Product::active(); // Chỉ lấy sản phẩm active
             
             // Filter theo category
-            if ($request->has('category') && $request->category !== 'all') {
+            if ($request->has('category') && $request->category && $request->category !== 'all') {
+                \Log::info('Filtering by category:', ['category' => $request->category]);
                 $query->where('category_id', $request->category);
+            } else {
+                \Log::info('No category filter applied');
             }
             
             // Tìm kiếm theo từ khóa
@@ -101,7 +106,7 @@ class ProductPageController extends Controller
                 $query->orderBy('id', 'desc');
             }
             
-            $products = $query->get()->map(function($product) {
+            $products = $query->with('variants')->get()->map(function($product) {
                 // Lấy category từ cột category hoặc từ quan hệ category_id
                 $category = 'Chưa phân loại';
                 if (isset($product->category) && $product->category) {
@@ -144,7 +149,17 @@ class ProductPageController extends Controller
                     'is_new' => isset($product->new) && ($product->new == 1 || $product->new == '1'),
                     'average_rating' => round($averageRating, 1),
                     'review_count' => $reviewCount,
-                    'total_sold' => $totalSold
+                    'total_sold' => $totalSold,
+                    'has_variants' => $product->variants->count() > 0,
+                    'variants' => $product->variants->map(function($variant) {
+                        return [
+                            'id' => $variant->id,
+                            'variant_name' => $variant->variant_name,
+                            'color' => $variant->color,
+                            'size' => $variant->size,
+                            'price' => $variant->price
+                        ];
+                    })
                 ];
             });
             
@@ -260,6 +275,43 @@ class ProductPageController extends Controller
             'averageRating',
             'totalComments'
         ));
+    }
+    
+    /**
+     * Show product reviews
+     */
+    public function reviews($id)
+    {
+        $product = Product::active()->findOrFail($id);
+        
+        $comments = \App\Models\Comment::where('product_id', $id)
+            ->where('is_verified', 1)
+            ->where('is_hidden', 0)
+            ->with(['user', 'images', 'replies'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+        
+        $averageRating = \App\Models\Comment::where('product_id', $id)
+            ->where('is_verified', 1)
+            ->where('is_hidden', 0)
+            ->avg('rating') ?? 0;
+        
+        $reviewCount = \App\Models\Comment::where('product_id', $id)
+            ->where('is_verified', 1)
+            ->where('is_hidden', 0)
+            ->count();
+        
+        // Rating distribution
+        $ratingDistribution = [];
+        for ($i = 5; $i >= 1; $i--) {
+            $ratingDistribution[$i] = \App\Models\Comment::where('product_id', $id)
+                                                       ->where('is_verified', 1)
+                                                       ->where('is_hidden', 0)
+                                                       ->where('rating', $i)
+                                                       ->count();
+        }
+        
+        return view('product-reviews', compact('product', 'comments', 'averageRating', 'reviewCount', 'ratingDistribution'));
     }
     
     // API để lấy danh sách categories

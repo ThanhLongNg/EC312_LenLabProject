@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\BannerController;
+use App\Http\Controllers\Admin\ChatbotController as AdminChatbotController;
 
 // ✅ Site controllers
 use App\Http\Controllers\ProductPageController;
@@ -24,12 +25,28 @@ use App\Http\Controllers\PostController; // nếu bạn vẫn dùng route /bai-v
 use App\Http\Controllers\PostPublicController; // route /blog/{slug}
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\LandingPageController;
+use App\Http\Controllers\DigitalProductController;
+use App\Http\Controllers\ChatbotController;
 
 Route::get('/', [LandingPageController::class, 'index']);
 
 // ---------------- USER PAGES ----------------
 Route::get('/san-pham', [ProductPageController::class, 'index'])->name('products');
 Route::get('/san-pham/{id}', [ProductPageController::class, 'show'])->name('product.detail');
+Route::get('/san-pham/{id}/danh-gia', [ReviewController::class, 'show'])->name('product.reviews');
+
+// Digital Products Routes
+Route::get('/san-pham-so', [App\Http\Controllers\DigitalProductController::class, 'index'])->name('digital-products.index');
+Route::get('/san-pham-so/{id}', [App\Http\Controllers\DigitalProductController::class, 'show'])->name('digital-products.show');
+Route::get('/san-pham-so/{id}/danh-gia', [ReviewController::class, 'showDigital'])->name('digital-products.reviews');
+
+// Digital Product Orders (require auth)
+Route::middleware('auth')->group(function () {
+    Route::get('/digital-orders', [App\Http\Controllers\DigitalProductController::class, 'myOrders'])->name('digital-orders.index');
+    Route::get('/don-hang-so', [App\Http\Controllers\DigitalProductController::class, 'myOrders'])->name('digital-orders.my');
+    Route::get('/digital-orders/{id}', [App\Http\Controllers\DigitalProductController::class, 'orderDetail'])->name('digital-orders.show');
+    Route::get('/digital-order-success/{id}', [App\Http\Controllers\DigitalProductController::class, 'orderSuccess'])->name('digital-orders.success');
+});
 
 Route::get('/gioi-thieu', fn () => view('intro'))->name('about');
 
@@ -154,6 +171,32 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     // Banners
     Route::get('/banners', [BannerController::class, 'edit'])->name('admin.banners.edit');
     Route::put('/banners', [BannerController::class, 'update'])->name('admin.banners.update');
+    
+    // Chatbot Management
+    Route::get('/chatbot/custom-requests', [AdminChatbotController::class, 'customRequests'])->name('admin.chatbot.custom-requests');
+    Route::put('/chatbot/custom-requests/{id}', [AdminChatbotController::class, 'updateCustomRequest'])->name('admin.chatbot.custom-requests.update');
+    Route::post('/chatbot/custom-requests/{id}/cancel', [AdminChatbotController::class, 'cancelRequest'])->name('admin.chatbot.custom-requests.cancel');
+    Route::get('/chatbot/chat-support', [AdminChatbotController::class, 'chatSupport'])->name('admin.chatbot.chat-support');
+    Route::get('/chatbot/chat-support/{requestId}', [AdminChatbotController::class, 'chatSupportWithRequest'])->name('admin.chatbot.chat-support.request');
+    Route::get('/chatbot/chat-logs', [AdminChatbotController::class, 'chatLogs'])->name('admin.chatbot.chat-logs');
+    Route::get('/chatbot/material-estimates', [AdminChatbotController::class, 'materialEstimates'])->name('admin.chatbot.material-estimates');
+    Route::get('/chatbot/analytics', [AdminChatbotController::class, 'analytics'])->name('admin.chatbot.analytics');
+    
+    // FAQ Management
+    Route::get('/faq', [App\Http\Controllers\Admin\FaqController::class, 'index'])->name('admin.faq.index');
+    Route::get('/faq/list', [App\Http\Controllers\Admin\FaqController::class, 'list'])->name('admin.faq.list');
+    Route::get('/faq/create', [App\Http\Controllers\Admin\FaqController::class, 'create'])->name('admin.faq.create');
+    Route::post('/faq', [App\Http\Controllers\Admin\FaqController::class, 'store'])->name('admin.faq.store');
+    Route::get('/faq/{id}/edit', [App\Http\Controllers\Admin\FaqController::class, 'edit'])->name('admin.faq.edit');
+    Route::put('/faq/{id}', [App\Http\Controllers\Admin\FaqController::class, 'update'])->name('admin.faq.update');
+    Route::delete('/faq/{id}', [App\Http\Controllers\Admin\FaqController::class, 'destroy'])->name('admin.faq.destroy');
+    Route::delete('/faq', [App\Http\Controllers\Admin\FaqController::class, 'bulkDelete'])->name('admin.faq.bulkDelete');
+    Route::post('/faq/{id}/toggle-active', [App\Http\Controllers\Admin\FaqController::class, 'toggleActive'])->name('admin.faq.toggleActive');
+    Route::get('/faq/statistics', [App\Http\Controllers\Admin\FaqController::class, 'statistics'])->name('admin.faq.statistics');
+    
+    // Chatbot API routes
+    Route::get('/api/chatbot/chat-history', [AdminChatbotController::class, 'getChatHistory'])->name('admin.api.chatbot.chat-history');
+    Route::post('/api/chatbot/send-message', [AdminChatbotController::class, 'sendAdminMessage'])->name('admin.api.chatbot.send-message');
 });
 
 // ---------------- MARKETING AREA ----------------
@@ -195,6 +238,7 @@ Route::prefix('api')->group(function () {
     Route::get('/products/{id}/variants', [App\Http\Controllers\ProductPageController::class, 'getVariants']);
     Route::get('/landing/products', [App\Http\Controllers\ProductPageController::class, 'landingProducts']);
     Route::get('/categories', [App\Http\Controllers\CategoryController::class, 'apiIndex']);
+    Route::get('/product-categories', [App\Http\Controllers\CategoryController::class, 'apiIndex']);
     Route::get('/categories/{id}/products', [App\Http\Controllers\CategoryController::class, 'getProductsByCategory']);
     Route::get('/cart', [App\Http\Controllers\CartController::class, 'index']);
     Route::post('/cart/add', [App\Http\Controllers\CartController::class, 'add'])->middleware('web');
@@ -248,6 +292,23 @@ Route::prefix('api')->group(function () {
     // Reviews
     Route::get('/reviews/{product_id}', [ReviewController::class, 'getReviews']);
     Route::post('/reviews', [ReviewController::class, 'submitReview'])->middleware('auth:api');
+    Route::post('/digital-reviews', [ReviewController::class, 'submitDigitalReview'])->middleware('auth');
     Route::get('/products/related', [ReviewController::class, 'getRelatedProducts']);
+    
+    // Digital Products API
+    Route::post('/digital-orders', [App\Http\Controllers\DigitalProductController::class, 'createOrder'])->middleware('web');
+    Route::get('/digital-products', [App\Http\Controllers\DigitalProductController::class, 'apiIndex']);
+    
+    // Chatbot API routes
+    Route::post('/chatbot/message', [ChatbotController::class, 'sendMessage'])->middleware('web');
+    Route::get('/chatbot/history', [ChatbotController::class, 'getHistory'])->middleware('web');
+    Route::get('/chatbot/faq-list', [ChatbotController::class, 'getFaqList'])->middleware('web');
+    Route::post('/chatbot/upload-image', [ChatbotController::class, 'uploadImage'])->middleware('web');
+    Route::post('/chatbot/add-to-cart', [ChatbotController::class, 'addEstimateToCart'])->middleware('web');
+    Route::post('/chatbot/deposit-payment', [ChatbotController::class, 'processDepositPayment'])->middleware('web');
+    Route::post('/chatbot/final-payment', [ChatbotController::class, 'processFinalPayment'])->middleware('web');
+    Route::post('/chatbot/reset', [ChatbotController::class, 'resetConversation'])->middleware('web');
+    Route::get('/chatbot/statistics', [ChatbotController::class, 'getStatistics'])->middleware('web');
+    Route::get('/chatbot/test-intent', [ChatbotController::class, 'testIntent'])->middleware('web');
 });
 

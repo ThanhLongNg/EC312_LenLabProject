@@ -113,13 +113,29 @@
                 <span class="material-symbols-outlined text-gray-400">chevron_right</span>
             </div>
             
+            <!-- START: Sản phẩm số của tôi - DIGITAL PRODUCTS MENU -->
+            <div class="menu-item rounded-xl p-4 mb-3 flex items-center justify-between cursor-pointer" onclick="window.location.href='/don-hang-so'">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
+                        <span class="material-symbols-outlined text-purple-400">cloud_download</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-white font-medium">Sản phẩm số của tôi</span>
+                    </div>
+                </div>
+                <span class="material-symbols-outlined text-gray-400">chevron_right</span>
+            </div>
+            <!-- END: Sản phẩm số của tôi - DIGITAL PRODUCTS MENU -->
+            
             <!-- Voucher của tôi -->
             <div class="menu-item rounded-xl p-4 mb-3 flex items-center justify-between cursor-pointer" onclick="window.location.href='/vouchers'">
                 <div class="flex items-center gap-4">
                     <div class="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
                         <span class="material-symbols-outlined text-orange-400">local_offer</span>
                     </div>
-                    <span class="text-white font-medium">Voucher của tôi</span>
+                    <div class="flex items-center gap-3">
+                        <span class="text-white font-medium">Voucher của tôi</span>
+                    </div>
                 </div>
                 <span class="material-symbols-outlined text-gray-400">chevron_right</span>
             </div>
@@ -130,7 +146,9 @@
                     <div class="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
                         <span class="material-symbols-outlined text-green-400">location_on</span>
                     </div>
-                    <span class="text-white font-medium">Số địa chỉ</span>
+                    <div class="flex items-center gap-3">
+                        <span class="text-white font-medium">Số địa chỉ</span>
+                    </div>
                 </div>
                 <span class="material-symbols-outlined text-gray-400">chevron_right</span>
             </div>

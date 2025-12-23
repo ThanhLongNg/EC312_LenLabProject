@@ -21,10 +21,30 @@ class PostPublicController extends Controller
     {
         $post = Post::where('slug', $slug)->firstOrFail();
 
-        // Render shortcode [product:ID] => HTML card
-        $contentHtml = $this->renderProductShortcodes($post->content ?? '');
+        // Extract product IDs from shortcodes to show as related products
+        $relatedProducts = $this->extractRelatedProducts($post->content ?? '');
+        
+        // Remove shortcodes from content completely, don't render them
+        $contentHtml = preg_replace('/\[product:\d+\]/', '', $post->content ?? '');
 
-        return view('blog.show', compact('post', 'contentHtml'));
+        return view('blog.show', compact('post', 'contentHtml', 'relatedProducts'));
+    }
+    
+    private function extractRelatedProducts(string $content): array
+    {
+        $productIds = [];
+        preg_match_all('/\[product:(\d+)\]/', $content, $matches);
+        
+        if (!empty($matches[1])) {
+            $productIds = array_unique(array_map('intval', $matches[1]));
+            return Product::whereIn('id', $productIds)
+                ->where('status', 1)
+                ->take(5) // Limit to 5 products
+                ->get()
+                ->toArray();
+        }
+        
+        return [];
     }
 
     private function renderProductShortcodes(string $content): string

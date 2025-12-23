@@ -83,6 +83,14 @@ class Order extends Model
     }
 
     /**
+     * Alias for orderItems
+     */
+    public function items()
+    {
+        return $this->orderItems();
+    }
+
+    /**
      * Get comments for this order
      */
     public function comments()

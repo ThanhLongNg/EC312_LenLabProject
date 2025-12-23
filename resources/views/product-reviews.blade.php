@@ -172,6 +172,19 @@
                 Viết đánh giá của bạn
             </button>
         </div>
+        @else
+        <div class="p-4">
+            <div class="bg-surface-dark rounded-xl p-4 text-center">
+                <span class="material-symbols-outlined text-gray-400 text-3xl mb-2 block">lock</span>
+                <p class="text-gray-400 text-sm">
+                    @auth
+                        Bạn cần mua và nhận sản phẩm này để có thể đánh giá.
+                    @else
+                        Vui lòng <a href="{{ route('login') }}" class="text-primary hover:underline">đăng nhập</a> để đánh giá sản phẩm.
+                    @endauth
+                </p>
+            </div>
+        </div>
         @endif
 
         <!-- Comments List -->

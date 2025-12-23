@@ -48,3 +48,4 @@ return new class extends Migration
         // $table->string('order_id')->nullable(false)->change();
     });
 }
+};

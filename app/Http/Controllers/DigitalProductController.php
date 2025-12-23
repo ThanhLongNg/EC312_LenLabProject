@@ -174,12 +174,15 @@ class DigitalProductController extends Controller
                 'customer_name' => $request->customer_name,
                 'order_code' => $request->order_code,
                 'amount_paid' => $request->amount_paid,
+                'purchase_price' => $request->amount_paid,
                 'purchased_at' => now(),
                 'expires_at' => now()->addDays($digitalProduct->access_days),
                 'downloads_count' => 0,
+                'download_count' => 0,
                 'email_sent' => false,
                 'download_history' => [],
-                'transfer_image' => $transferImagePath
+                'transfer_image' => $transferImagePath,
+                'status' => 'pending'
             ];
             
             \Log::info('Creating purchase with data', $purchaseData);

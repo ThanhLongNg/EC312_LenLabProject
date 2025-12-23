@@ -63,7 +63,7 @@
         <div class="space-y-4">
             @foreach($purchases as $purchase)
                 <div class="bg-surface-dark rounded-2xl p-4 border border-white/10 cursor-pointer hover:border-primary/20 transition-colors" 
-                     onclick="window.location.href='/don-hang-so/{{ $purchase->id }}'">
+                     onclick="window.location.href='/digital-orders/{{ $purchase->id }}'">>
                     
                     <!-- Order Header -->
                     <div class="flex items-center justify-between mb-3">
@@ -103,9 +103,9 @@
                             <h3 class="text-white font-medium mb-1 line-clamp-2">{{ $purchase->digitalProduct->name }}</h3>
                             <p class="text-gray-400 text-sm mb-2">{{ Str::limit($purchase->digitalProduct->description, 60) }}</p>
                             <div class="flex items-center justify-between">
-                                <span class="text-primary font-bold">{{ number_format($purchase->amount_paid) }}đ</span>
+                                <span class="text-primary font-bold">{{ number_format($purchase->amount_paid ?? $purchase->purchase_price ?? 0) }}đ</span>
                                 <div class="flex items-center gap-4 text-xs text-gray-400">
-                                    <span>{{ $purchase->downloads_count }}/{{ $purchase->digitalProduct->download_limit }} lần tải</span>
+                                    <span>{{ $purchase->downloads_count ?? $purchase->download_count ?? 0 }}/{{ $purchase->digitalProduct->download_limit ?? 'Không giới hạn' }} lần tải</span>
                                     @if($purchase->expires_at)
                                         <span>Hết hạn: {{ $purchase->expires_at->format('d/m/Y') }}</span>
                                     @endif

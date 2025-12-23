@@ -15,6 +15,10 @@ class CommentReply extends Model
         'reply'
     ];
 
+    protected $casts = [
+        'created_at' => 'datetime'
+    ];
+
     public $timestamps = false; // Only has created_at
 
     /**

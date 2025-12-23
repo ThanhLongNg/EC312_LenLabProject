@@ -16,13 +16,17 @@ class DigitalProductPurchase extends Model
         'customer_email',
         'customer_name',
         'order_code',
+        'purchase_price',
         'amount_paid',
         'purchased_at',
         'expires_at',
+        'download_count',
         'downloads_count',
         'email_sent',
         'download_history',
-        'transfer_image'
+        'download_links',
+        'transfer_image',
+        'status'
     ];
 
     protected $casts = [
@@ -30,7 +34,9 @@ class DigitalProductPurchase extends Model
         'expires_at' => 'datetime',
         'email_sent' => 'boolean',
         'download_history' => 'array',
-        'amount_paid' => 'decimal:2'
+        'download_links' => 'array',
+        'amount_paid' => 'decimal:2',
+        'purchase_price' => 'decimal:2'
     ];
 
     public function digitalProduct()
@@ -41,6 +47,11 @@ class DigitalProductPurchase extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class, 'digital_purchase_id');
     }
 
     public function isExpired()
@@ -54,7 +65,8 @@ class DigitalProductPurchase extends Model
             return false;
         }
 
-        return $this->downloads_count < $this->digitalProduct->download_limit;
+        $downloadCount = $this->downloads_count ?? $this->download_count ?? 0;
+        return $downloadCount < $this->digitalProduct->download_limit;
     }
 
     public function recordDownload()
@@ -65,9 +77,51 @@ class DigitalProductPurchase extends Model
             'ip_address' => request()->ip()
         ];
 
+        $currentCount = $this->downloads_count ?? $this->download_count ?? 0;
+        
         $this->update([
-            'downloads_count' => $this->downloads_count + 1,
+            'downloads_count' => $currentCount + 1,
+            'download_count' => $currentCount + 1,
             'download_history' => $history
         ]);
+    }
+
+    /**
+     * Get the status attribute, calculating it if not set
+     */
+    public function getStatusAttribute($value)
+    {
+        // If status is explicitly set, return it
+        if ($value) {
+            return $value;
+        }
+
+        // Calculate status based on conditions
+        if ($this->isExpired()) {
+            return 'expired';
+        }
+
+        // If we have a purchase date, it's active
+        if ($this->purchased_at) {
+            return 'active';
+        }
+
+        return 'pending';
+    }
+
+    /**
+     * Get downloads count (support both field names)
+     */
+    public function getDownloadsCountAttribute($value)
+    {
+        return $value ?? $this->download_count ?? 0;
+    }
+
+    /**
+     * Get amount paid (support both field names)
+     */
+    public function getAmountPaidAttribute($value)
+    {
+        return $value ?? $this->purchase_price ?? 0;
     }
 }
