@@ -38,6 +38,16 @@ class DigitalProduct extends Model
         return $this->hasMany(DigitalProductPurchase::class);
     }
 
+    public function comments()
+    {
+        return $this->hasMany(Comment::class, 'digital_product_id');
+    }
+
+    public function verifiedComments()
+    {
+        return $this->hasMany(Comment::class, 'digital_product_id')->verified()->visible();
+    }
+
     public function getFormattedPriceAttribute()
     {
         return number_format($this->price) . '₫';
@@ -45,10 +55,27 @@ class DigitalProduct extends Model
 
     public function getThumbnailUrlAttribute()
     {
-        if ($this->thumbnail && \Storage::disk('public')->exists($this->thumbnail)) {
-            return asset('storage/' . $this->thumbnail);
+        if ($this->thumbnail) {
+            // Check if it's a storage path
+            if (\Storage::disk('public')->exists($this->thumbnail)) {
+                return asset('storage/' . $this->thumbnail);
+            }
+            // Check if it's a public asset path
+            if (file_exists(public_path($this->thumbnail))) {
+                return asset($this->thumbnail);
+            }
         }
-        return null; // Return null instead of non-existent default image
+        return null;
+    }
+
+    public function getAverageRatingAttribute()
+    {
+        return $this->verifiedComments()->avg('rating') ?: 0;
+    }
+
+    public function getReviewCountAttribute()
+    {
+        return $this->verifiedComments()->count();
     }
 
     public function scopeActive($query)
