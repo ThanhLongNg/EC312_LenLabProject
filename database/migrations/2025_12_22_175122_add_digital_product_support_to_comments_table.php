@@ -10,27 +10,41 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
-        Schema::table('comments', function (Blueprint $table) {
-            // Add digital_product_id column (nullable because not all comments are for digital products)
+{
+    Schema::table('comments', function (Blueprint $table) {
+        // 1) Add digital_product_id (nullable)
+        if (!Schema::hasColumn('comments', 'digital_product_id')) {
             $table->unsignedBigInteger('digital_product_id')->nullable()->after('product_id');
-            
-            // Add digital_purchase_id to link to digital_product_purchases
+        }
+
+        // 2) Add digital_purchase_id (nullable)
+        if (!Schema::hasColumn('comments', 'digital_purchase_id')) {
             $table->unsignedBigInteger('digital_purchase_id')->nullable()->after('order_id');
-            
-            // Make product_id and order_id nullable since digital products don't use them
-            $table->unsignedBigInteger('product_id')->nullable()->change();
-            $table->string('order_id')->nullable()->change();
-        });
-    }
+        }
+
+        // 3) Make product_id + order_id nullable (digital products don't use them)
+        // product_id in current DB is int(11) => use unsignedInteger, NOT unsignedBigInteger
+        $table->unsignedInteger('product_id')->nullable()->change();
+        $table->string('order_id')->nullable()->change();
+    });
+}
+
 
     /**
      * Reverse the migrations.
      */
-    public function down(): void
-    {
-        Schema::table('comments', function (Blueprint $table) {
-            $table->dropColumn(['digital_product_id', 'digital_purchase_id']);
-        });
-    }
-};
+   public function down(): void
+{
+    Schema::table('comments', function (Blueprint $table) {
+        if (Schema::hasColumn('comments', 'digital_product_id')) {
+            $table->dropColumn('digital_product_id');
+        }
+        if (Schema::hasColumn('comments', 'digital_purchase_id')) {
+            $table->dropColumn('digital_purchase_id');
+        }
+
+        // Optional: revert nullable if you want (không bắt buộc)
+        // $table->unsignedInteger('product_id')->nullable(false)->change();
+        // $table->string('order_id')->nullable(false)->change();
+    });
+}
