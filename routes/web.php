@@ -174,10 +174,18 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     
     // Chatbot Management
     Route::get('/chatbot/custom-requests', [AdminChatbotController::class, 'customRequests'])->name('admin.chatbot.custom-requests');
+    Route::get('/chatbot/custom-requests/{id}/details', [AdminChatbotController::class, 'getRequestDetails'])->name('admin.chatbot.custom-requests.details');
     Route::put('/chatbot/custom-requests/{id}', [AdminChatbotController::class, 'updateCustomRequest'])->name('admin.chatbot.custom-requests.update');
     Route::post('/chatbot/custom-requests/{id}/cancel', [AdminChatbotController::class, 'cancelRequest'])->name('admin.chatbot.custom-requests.cancel');
+    
+    // NEW FLOW ROUTES
+    Route::get('/chatbot/custom-requests/{id}/respond', [AdminChatbotController::class, 'respondToRequest'])->name('admin.chatbot.custom-requests.respond');
+    Route::post('/chatbot/custom-requests/{id}/finalize', [AdminChatbotController::class, 'finalizeRequest'])->name('admin.chatbot.custom-requests.finalize');
+    Route::post('/chatbot/custom-requests/{id}/end-conversation', [AdminChatbotController::class, 'endConversation'])->name('admin.chatbot.custom-requests.end-conversation');
+    Route::post('/chatbot/custom-requests/{id}/confirm-payment', [AdminChatbotController::class, 'confirmPayment'])->name('admin.chatbot.custom-requests.confirm-payment');
+    
     Route::get('/chatbot/chat-support', [AdminChatbotController::class, 'chatSupport'])->name('admin.chatbot.chat-support');
-    Route::get('/chatbot/chat-support/{requestId}', [AdminChatbotController::class, 'chatSupportWithRequest'])->name('admin.chatbot.chat-support.request');
+    Route::get('/chatbot/chat-support/{requestId}', [AdminChatbotController::class, 'chatSupportWithRequest'])->name('admin.chatbot.chat-support.detail');
     Route::get('/chatbot/chat-logs', [AdminChatbotController::class, 'chatLogs'])->name('admin.chatbot.chat-logs');
     Route::get('/chatbot/material-estimates', [AdminChatbotController::class, 'materialEstimates'])->name('admin.chatbot.material-estimates');
     Route::get('/chatbot/analytics', [AdminChatbotController::class, 'analytics'])->name('admin.chatbot.analytics');
@@ -197,6 +205,7 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     // Chatbot API routes
     Route::get('/api/chatbot/chat-history', [AdminChatbotController::class, 'getChatHistory'])->name('admin.api.chatbot.chat-history');
     Route::post('/api/chatbot/send-message', [AdminChatbotController::class, 'sendAdminMessage'])->name('admin.api.chatbot.send-message');
+    Route::patch('/api/chatbot/custom-requests/{id}/status', [AdminChatbotController::class, 'updateCustomRequestStatus'])->name('admin.api.chatbot.custom-requests.status');
 });
 
 // ---------------- MARKETING AREA ----------------
@@ -231,6 +240,12 @@ Route::middleware('auth')->group(function () {
 
 // Public post detail
 Route::get('/bai-viet/{id}', [PostController::class, 'show'])->name('post.show');
+
+// Chat Support routes (user-facing)
+Route::middleware('auth')->group(function () {
+    Route::get('/chat-support/{requestId}', [App\Http\Controllers\ChatSupportController::class, 'show'])->name('chat-support.show');
+    Route::get('/my-requests', [App\Http\Controllers\MyRequestsController::class, 'index'])->name('my-requests');
+});
 
 // API Routes for user-facing website
 Route::prefix('api')->group(function () {
@@ -287,6 +302,9 @@ Route::prefix('api')->group(function () {
         Route::post('/checkout/prepare-bank-transfer', [App\Http\Controllers\CheckoutController::class, 'prepareBankTransfer']);
         Route::post('/checkout/complete-bank-transfer', [App\Http\Controllers\CheckoutController::class, 'completeBankTransfer']);
         Route::post('/checkout/create-order', [App\Http\Controllers\CheckoutController::class, 'createOrder']);
+        
+        // My Requests API
+        Route::get('/my-requests/unread-count', [App\Http\Controllers\MyRequestsController::class, 'getUnreadCount']);
     });
 
     // Reviews
@@ -299,16 +317,23 @@ Route::prefix('api')->group(function () {
     Route::post('/digital-orders', [App\Http\Controllers\DigitalProductController::class, 'createOrder'])->middleware('web');
     Route::get('/digital-products', [App\Http\Controllers\DigitalProductController::class, 'apiIndex']);
     
-    // Chatbot API routes
+    // Chat Support API
+    Route::middleware('auth')->group(function () {
+        Route::post('/chat-support/send-message', [App\Http\Controllers\ChatSupportController::class, 'sendMessage']);
+        Route::get('/chat-support/check-messages/{requestId}', [App\Http\Controllers\ChatSupportController::class, 'checkMessages']);
+    });
+    
+    // Chatbot API routes - NEW FLOW (NO DEPOSIT)
     Route::post('/chatbot/message', [ChatbotController::class, 'sendMessage'])->middleware('web');
     Route::get('/chatbot/history', [ChatbotController::class, 'getHistory'])->middleware('web');
+    Route::get('/chatbot/check-admin-messages', [ChatbotController::class, 'checkAdminMessages'])->middleware('web');
     Route::get('/chatbot/faq-list', [ChatbotController::class, 'getFaqList'])->middleware('web');
     Route::post('/chatbot/upload-image', [ChatbotController::class, 'uploadImage'])->middleware('web');
+    Route::get('/chatbot/uploaded-images', [ChatbotController::class, 'getUploadedImages'])->middleware('web'); // NEW: Get uploaded images
+    Route::delete('/chatbot/delete-image', [ChatbotController::class, 'deleteUploadedImage'])->middleware('web'); // NEW: Delete uploaded image
     Route::post('/chatbot/add-to-cart', [ChatbotController::class, 'addEstimateToCart'])->middleware('web');
-    Route::post('/chatbot/deposit-payment', [ChatbotController::class, 'processDepositPayment'])->middleware('web');
-    Route::post('/chatbot/final-payment', [ChatbotController::class, 'processFinalPayment'])->middleware('web');
+    Route::post('/chatbot/process-payment', [ChatbotController::class, 'processPayment'])->middleware('web'); // NEW: One-time payment
     Route::post('/chatbot/reset', [ChatbotController::class, 'resetConversation'])->middleware('web');
     Route::get('/chatbot/statistics', [ChatbotController::class, 'getStatistics'])->middleware('web');
-    Route::get('/chatbot/test-intent', [ChatbotController::class, 'testIntent'])->middleware('web');
 });
 

@@ -18,23 +18,125 @@ class OrderController extends BaseAdminController
         $q = trim($request->q ?? '');
         $status = $request->status;
         $paymentMethod = $request->payment_method;
+        $orderType = $request->order_type;
 
-        $orders = Order::query()
-            ->when($q !== '', function ($query) use ($q) {
-                $query->where(function ($sub) use ($q) {
-                    $sub->where('order_id', 'like', "%{$q}%")
-                        ->orWhere('full_name', 'like', "%{$q}%")
-                        ->orWhere('phone', 'like', "%{$q}%")
-                        ->orWhere('email', 'like', "%{$q}%");
-                });
-            })
-            ->when($status, fn($query) => $query->where('status', $status))
-            ->when($paymentMethod, fn($query) => $query->where('payment_method', $paymentMethod))
-            ->orderByDesc('created_at')
-            ->paginate(10)
-            ->withQueryString(); // giữ filter khi bấm pagination
+        // Get regular orders
+        $orders = collect();
+        if (!$orderType || $orderType === 'regular') {
+            $orders = Order::query()
+                ->when($q !== '', function ($query) use ($q) {
+                    $query->where(function ($sub) use ($q) {
+                        $sub->where('order_id', 'like', "%{$q}%")
+                            ->orWhere('full_name', 'like', "%{$q}%")
+                            ->orWhere('phone', 'like', "%{$q}%")
+                            ->orWhere('email', 'like', "%{$q}%");
+                    });
+                })
+                ->when($status, fn($query) => $query->where('status', $status))
+                ->when($paymentMethod, fn($query) => $query->where('payment_method', $paymentMethod))
+                ->orderByDesc('created_at')
+                ->get();
+        }
+
+        // Get custom product requests (paid status)
+        $customRequests = collect();
+        if (!$orderType || $orderType === 'custom') {
+            $customRequests = \App\Models\CustomProductRequest::with('user')
+                ->whereIn('status', ['payment_submitted', 'paid', 'completed'])
+                ->when($q !== '', function ($query) use ($q) {
+                    $query->where(function ($sub) use ($q) {
+                        $sub->where('id', 'like', "%{$q}%")
+                            ->orWhereHas('user', function($userQuery) use ($q) {
+                                $userQuery->where('name', 'like', "%{$q}%")
+                                          ->orWhere('email', 'like', "%{$q}%");
+                            });
+                    });
+                })
+                ->orderByDesc('created_at')
+                ->get();
+        }
+
+        // Convert custom requests to order-like format
+        $customOrdersFormatted = $customRequests->map(function ($request) {
+            return (object) [
+                'order_id' => $this->generateCustomOrderId($request->id, $request->created_at),
+                'full_name' => $request->user->name ?? 'Khách hàng',
+                'phone' => $request->payment_info['customer_phone'] ?? ($request->user->phone ?? 'N/A'),
+                'email' => $request->payment_info['customer_email'] ?? ($request->user->email ?? 'N/A'),
+                'created_at' => $request->created_at,
+                'total_amount' => $request->final_price,
+                'payment_method' => 'bank_transfer',
+                'payment_status' => $request->status === 'paid' ? 'paid' : 'pending',
+                'transfer_image' => $request->payment_bill_image,
+                'status' => $this->mapCustomRequestStatus($request->status),
+                'order_note' => $request->product_type . ' - ' . $request->size,
+                'is_custom_request' => true,
+                'custom_request_id' => $request->id,
+                'custom_request_data' => $request
+            ];
+        });
+
+        // Merge and sort all orders
+        $allOrders = $orders->concat($customOrdersFormatted)
+            ->sortByDesc('created_at')
+            ->values();
+
+        // Apply status filter to merged results
+        if ($status) {
+            $allOrders = $allOrders->filter(function ($order) use ($status) {
+                return $order->status === $status;
+            });
+        }
+
+        // Apply payment method filter to merged results
+        if ($paymentMethod) {
+            $allOrders = $allOrders->filter(function ($order) use ($paymentMethod) {
+                return $order->payment_method === $paymentMethod;
+            });
+        }
+
+        // Paginate manually
+        $perPage = 10;
+        $currentPage = \Illuminate\Pagination\Paginator::resolveCurrentPage();
+        $currentItems = $allOrders->slice(($currentPage - 1) * $perPage, $perPage);
+        
+        $orders = new \Illuminate\Pagination\LengthAwarePaginator(
+            $currentItems,
+            $allOrders->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => request()->url(),
+                'pageName' => 'page',
+            ]
+        );
+        $orders->withQueryString();
 
         return $this->view('admin.orders.index_simple', compact('orders'));
+    }
+
+    /**
+     * Generate consistent custom order ID format: LL + YYYYMMDD + sequential number
+     */
+    private function generateCustomOrderId($requestId, $createdAt)
+    {
+        $datePrefix = $createdAt->format('Ymd'); // YYYYMMDD format
+        $sequentialNumber = str_pad($requestId, 2, '0', STR_PAD_LEFT); // At least 2 digits
+        return "LL{$datePrefix}{$sequentialNumber}";
+    }
+
+    /**
+     * Map custom request status to order status
+     */
+    private function mapCustomRequestStatus($customStatus)
+    {
+        return match($customStatus) {
+            'payment_submitted' => 'pending',
+            'paid' => 'processing',
+            'completed' => 'delivered',
+            'cancelled' => 'cancelled',
+            default => 'pending'
+        };
     }
 
     // API để DataTable load danh sách đơn hàng

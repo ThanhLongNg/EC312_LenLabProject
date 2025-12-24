@@ -460,5 +460,29 @@ $(document).ready(function() {
 <!-- Chatbot Widget -->
 @include('components.chatbot')
 
+<!-- Service Worker Registration -->
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        // First, unregister any existing service workers that might be causing issues
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for(let registration of registrations) {
+                console.log('Unregistering existing service worker:', registration.scope);
+                registration.unregister();
+            }
+            
+            // Then register our new service worker
+            navigator.serviceWorker.register('/sw.js')
+                .then(function(registration) {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                })
+                .catch(function(err) {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+        });
+    });
+}
+</script>
+
 </body>
 </html>

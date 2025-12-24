@@ -45,8 +45,11 @@ class CommentSeeder extends Seeder
         // Tạo một số đơn hàng mẫu với status 'delivered'
         $orders = [];
         for ($i = 1; $i <= 6; $i++) {
+            // Use consistent format: LL + YYYYMMDD + sequential number
+            $orderId = 'LL' . now()->format('Ymd') . str_pad($i, 2, '0', STR_PAD_LEFT);
+            
             $order = Order::firstOrCreate([
-                'order_id' => 'LL2025122' . str_pad($i, 4, '0', STR_PAD_LEFT)
+                'order_id' => $orderId
             ], [
                 'user_id' => $users[($i - 1) % count($users)]->id,
                 'status' => 'delivered',
@@ -95,30 +98,37 @@ class CommentSeeder extends Seeder
         }
 
         // Tạo comments mẫu
+        // Tạo comments mẫu với format order ID nhất quán
         $sampleComments = [
             [
                 'rating' => 5,
-                'comment' => 'Sản phẩm rất tốt, chất lượng len mềm mại, màu sắc đúng như hình. Mình rất hài lòng với sản phẩm này. Shop gói hàng cẩn thận, giao hàng nhanh. Sẽ ủng hộ shop tiếp!'
+                'comment' => 'Sản phẩm tuyệt vời! Chất lượng len rất tốt, màu sắc đúng như hình. Mình rất hài lòng với sản phẩm này. Shop gói hàng cẩn thận, giao hàng nhanh. Sẽ ủng hộ shop tiếp!',
+                'order_id' => 'LL' . now()->format('Ymd') . '03'
             ],
             [
                 'rating' => 4,
-                'comment' => 'Len rất đẹp, màu sắc tươi sáng. Chất lượng tốt, không bị xù lông. Tuy nhiên giá hơi cao so với thị trường. Nhưng nhìn chung vẫn hài lòng với sản phẩm.'
+                'comment' => 'Len rất đẹp, màu sắc tươi sáng. Chất lượng tốt, không bị xù lông. Tuy nhiên giá hơi cao so với thị trường. Nhưng nhìn chung vẫn hài lòng với sản phẩm.',
+                'order_id' => 'LL' . now()->format('Ymd') . '04'
             ],
             [
                 'rating' => 5,
-                'comment' => 'Tuyệt vời! Mua để làm mũ cho con, len rất mềm và không gây kích ứng da. Con mình rất thích. Màu sắc đẹp, không phai màu sau khi giặt. Recommend!'
+                'comment' => 'Tuyệt vời! Mua để làm mũ cho con, len rất mềm và không gây kích ứng da. Con mình rất thích. Màu sắc đẹp, không phai màu sau khi giặt. Recommend!',
+                'order_id' => 'LL' . now()->format('Ymd') . '05'
             ],
             [
                 'rating' => 3,
-                'comment' => 'Sản phẩm ổn, chưa có gì đặc biệt. Chất lượng bình thường, phù hợp với giá tiền. Giao hàng hơi chậm so với dự kiến.'
+                'comment' => 'Sản phẩm ổn, chưa có gì đặc biệt. Chất lượng bình thường, phù hợp với giá tiền. Giao hàng hơi chậm so với dự kiến.',
+                'order_id' => 'LL' . now()->format('Ymd') . '06'
             ],
             [
                 'rating' => 4,
-                'comment' => 'Chất lượng len tốt, đan móc dễ dàng. Màu sắc đẹp mắt. Chỉ có điều hơi ít so với mô tả, may mà vẫn đủ để hoàn thành sản phẩm.'
+                'comment' => 'Chất lượng len tốt, đan móc dễ dàng. Màu sắc đẹp mắt. Chỉ có điều hơi ít so với mô tả, may mà vẫn đủ để hoàn thành sản phẩm.',
+                'order_id' => 'LL' . now()->format('Ymd') . '01'
             ],
             [
                 'rating' => 5,
-                'comment' => 'Len chất lượng cao, mềm mịn. Đan lên rất đẹp và bền. Shop tư vấn nhiệt tình, giao hàng nhanh. Sẽ quay lại mua thêm!'
+                'comment' => 'Len chất lượng cao, mềm mịn. Đan lên rất đẹp và bền. Shop tư vấn nhiệt tình, giao hàng nhanh. Sẽ quay lại mua thêm!',
+                'order_id' => 'LL' . now()->format('Ymd') . '02'
             ]
         ];
 
@@ -134,7 +144,7 @@ class CommentSeeder extends Seeder
                     $comment = Comment::create([
                         'user_id' => $order->user_id,
                         'product_id' => $item->product_id,
-                        'order_id' => $order->order_id,
+                        'order_id' => $order->order_id, // Use the actual order ID from the order
                         'rating' => $commentData['rating'],
                         'comment' => $commentData['comment'],
                         'is_verified' => 1,

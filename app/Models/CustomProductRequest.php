@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CustomProductRequest extends Model
 {
@@ -19,6 +20,7 @@ class CustomProductRequest extends Model
         'admin_notes',
         'admin_response',
         'admin_responded_at',
+        'estimated_price',
         'final_price',
         'estimated_completion_days',
         'payment_info',
@@ -45,11 +47,14 @@ class CustomProductRequest extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function chatSupportLogs(): HasMany
+    {
+        return $this->hasMany(ChatSupportLog::class);
+    }
+
     public function getStatusTextAttribute(): string
     {
         return match($this->status) {
-            'pending_info' => 'Đang thu thập thông tin',
-            'pending_images' => 'Chờ upload ảnh',
             'pending_admin_response' => 'Chờ admin phản hồi',
             'in_discussion' => 'Đang trao đổi với admin',
             'awaiting_payment' => 'Chờ thanh toán',
@@ -58,7 +63,7 @@ class CustomProductRequest extends Model
             'completed' => 'Hoàn thành',
             'cancelled' => 'Đã hủy',
             default => 'Không xác định'
-        ];
+        };
     }
 
     // State machine methods
@@ -154,5 +159,71 @@ class CustomProductRequest extends Model
         }
         
         $this->update(['status' => 'completed']);
+    }
+
+    /**
+     * Generate consistent custom order ID format: LL + YYYYMMDD + sequential number
+     */
+    public function getOrderIdAttribute(): string
+    {
+        $datePrefix = $this->created_at->format('Ymd'); // YYYYMMDD format
+        $sequentialNumber = str_pad($this->id, 2, '0', STR_PAD_LEFT); // At least 2 digits
+        return "LL{$datePrefix}{$sequentialNumber}";
+    }
+
+    /**
+     * Lấy thông tin liên hệ (cho guest user)
+     */
+    public function getContactInfoAttribute($value)
+    {
+        return $value ? json_decode($value, true) : null;
+    }
+
+    /**
+     * Lấy tên khách hàng (từ user hoặc contact_info)
+     */
+    public function getCustomerNameAttribute(): string
+    {
+        if ($this->user) {
+            return $this->user->name;
+        }
+        
+        if ($this->contact_info && isset($this->contact_info['name'])) {
+            return $this->contact_info['name'];
+        }
+        
+        return 'Khách hàng';
+    }
+
+    /**
+     * Lấy số điện thoại khách hàng
+     */
+    public function getCustomerPhoneAttribute(): ?string
+    {
+        if ($this->user && $this->user->phone) {
+            return $this->user->phone;
+        }
+        
+        if ($this->contact_info && isset($this->contact_info['phone'])) {
+            return $this->contact_info['phone'];
+        }
+        
+        return null;
+    }
+
+    /**
+     * Lấy email khách hàng
+     */
+    public function getCustomerEmailAttribute(): ?string
+    {
+        if ($this->user && $this->user->email) {
+            return $this->user->email;
+        }
+        
+        if ($this->contact_info && isset($this->contact_info['email'])) {
+            return $this->contact_info['email'];
+        }
+        
+        return null;
     }
 }

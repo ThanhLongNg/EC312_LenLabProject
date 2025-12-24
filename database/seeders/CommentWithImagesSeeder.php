@@ -14,12 +14,13 @@ class CommentWithImagesSeeder extends Seeder
      */
     public function run(): void
     {
-        // Tạo comment có ảnh cho sản phẩm 1
+        // Tạo comment có ảnh cho sản phẩm 1 với format order ID nhất quán
+        $baseDate = now()->format('Ymd');
         $commentsWithImages = [
             [
                 'user_id' => 13,
                 'product_id' => 1,
-                'order_id' => 'LL20251220003',
+                'order_id' => "LL{$baseDate}03",
                 'rating' => 5,
                 'comment' => 'Sản phẩm tuyệt vời! Chất lượng len rất tốt, màu sắc đẹp như hình. Mình đã hoàn thành được chiếc áo len đầu tiên. Cảm ơn shop! Đây là kết quả sau khi đan xong.',
                 'images' => ['uudai_sample1.jpg', 'review_sample1.webp']
@@ -27,7 +28,7 @@ class CommentWithImagesSeeder extends Seeder
             [
                 'user_id' => 14,
                 'product_id' => 1,
-                'order_id' => 'LL20251220004',
+                'order_id' => "LL{$baseDate}04",
                 'rating' => 4,
                 'comment' => 'Len mềm mại, dễ đan. Màu sắc hơi khác một chút so với hình nhưng vẫn đẹp. Giao hàng nhanh, đóng gói cẩn thận. Mình đã làm được chiếc khăn xinh xắn.',
                 'images' => ['review_sample2.webp']
@@ -35,7 +36,7 @@ class CommentWithImagesSeeder extends Seeder
             [
                 'user_id' => 15,
                 'product_id' => 2,
-                'order_id' => 'LL20251220005',
+                'order_id' => "LL{$baseDate}05",
                 'rating' => 5,
                 'comment' => 'Combo tự làm rất chi tiết, hướng dẫn dễ hiểu. Mình đã làm được chiếc túi xinh xắn. Chất lượng len A+! Kèm theo ảnh thành phẩm và quá trình làm.',
                 'images' => ['review_sample3.jpg', 'uudai_sample1.jpg']
@@ -43,7 +44,7 @@ class CommentWithImagesSeeder extends Seeder
             [
                 'user_id' => 16,
                 'product_id' => 3,
-                'order_id' => 'LL20251220006',
+                'order_id' => "LL{$baseDate}06",
                 'rating' => 4,
                 'comment' => 'Sản phẩm đúng như mô tả, chất lượng tốt. Mình rất hài lòng với việc mua hàng lần này. Sẽ tiếp tục ủng hộ shop!',
                 'images' => ['review_sample1.webp', 'review_sample2.webp', 'review_sample3.jpg']
@@ -62,31 +63,32 @@ class CommentWithImagesSeeder extends Seeder
             DB::table('users')->insertOrIgnore($user);
         }
 
-        // Tạo thêm order nếu chưa có
+        // Tạo thêm order nếu chưa có với format nhất quán
+        $baseDate = now()->format('Ymd');
         $orders = [
             [
-                'order_id' => 'LL20251220003',
+                'order_id' => "LL{$baseDate}03",
                 'user_id' => 13,
                 'status' => 'delivered',
                 'total_amount' => 150000,
                 'created_at' => now()->subDays(10)
             ],
             [
-                'order_id' => 'LL20251220004',
+                'order_id' => "LL{$baseDate}04",
                 'user_id' => 14,
                 'status' => 'delivered',
                 'total_amount' => 200000,
                 'created_at' => now()->subDays(8)
             ],
             [
-                'order_id' => 'LL20251220005',
+                'order_id' => "LL{$baseDate}05",
                 'user_id' => 15,
                 'status' => 'delivered',
                 'total_amount' => 180000,
                 'created_at' => now()->subDays(5)
             ],
             [
-                'order_id' => 'LL20251220006',
+                'order_id' => "LL{$baseDate}06",
                 'user_id' => 16,
                 'status' => 'delivered',
                 'total_amount' => 250000,
@@ -98,12 +100,13 @@ class CommentWithImagesSeeder extends Seeder
             DB::table('orders')->insertOrIgnore($order);
         }
 
-        // Tạo order items
+        // Tạo order items với format nhất quán
+        $baseDate = now()->format('Ymd');
         $orderItems = [
-            ['order_id' => 'LL20251220003', 'product_id' => 1, 'quantity' => 2, 'price' => 75000, 'variant_id' => 1],
-            ['order_id' => 'LL20251220004', 'product_id' => 1, 'quantity' => 1, 'price' => 200000, 'variant_id' => 2],
-            ['order_id' => 'LL20251220005', 'product_id' => 2, 'quantity' => 1, 'price' => 180000, 'variant_id' => 3],
-            ['order_id' => 'LL20251220006', 'product_id' => 3, 'quantity' => 1, 'price' => 250000, 'variant_id' => 4]
+            ['order_id' => "LL{$baseDate}03", 'product_id' => 1, 'quantity' => 2, 'price' => 75000, 'variant_id' => 1],
+            ['order_id' => "LL{$baseDate}04", 'product_id' => 1, 'quantity' => 1, 'price' => 200000, 'variant_id' => 2],
+            ['order_id' => "LL{$baseDate}05", 'product_id' => 2, 'quantity' => 1, 'price' => 180000, 'variant_id' => 3],
+            ['order_id' => "LL{$baseDate}06", 'product_id' => 3, 'quantity' => 1, 'price' => 250000, 'variant_id' => 4]
         ];
 
         foreach ($orderItems as $item) {

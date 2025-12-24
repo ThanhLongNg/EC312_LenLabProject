@@ -140,6 +140,20 @@
                 <span class="material-symbols-outlined text-gray-400">chevron_right</span>
             </div>
             
+            <!-- Yêu cầu của tôi -->
+            <div class="menu-item rounded-xl p-4 mb-3 flex items-center justify-between cursor-pointer" onclick="window.location.href='/my-requests'">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
+                        <span class="material-symbols-outlined text-blue-400">assignment</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-white font-medium">Yêu cầu của tôi</span>
+                        <span id="profile-requests-badge" class="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium hidden"></span>
+                    </div>
+                </div>
+                <span class="material-symbols-outlined text-gray-400">chevron_right</span>
+            </div>
+            
             <!-- Số địa chỉ -->
             <div class="menu-item rounded-xl p-4 mb-3 flex items-center justify-between cursor-pointer" onclick="window.location.href='/addresses'">
                 <div class="flex items-center gap-4">
@@ -271,6 +285,40 @@
             if (e.target === this) {
                 hideAccountSettings();
             }
+        });
+        
+        // Check for unread messages and update notification badge
+        function checkUnreadMessages() {
+            fetch('/api/my-requests/unread-count', {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.unread_count > 0) {
+                    const profileBadge = document.getElementById('profile-requests-badge');
+                    if (profileBadge) {
+                        profileBadge.textContent = data.unread_count + ' mới';
+                        profileBadge.classList.remove('hidden');
+                    }
+                } else {
+                    const profileBadge = document.getElementById('profile-requests-badge');
+                    if (profileBadge) profileBadge.classList.add('hidden');
+                }
+            })
+            .catch(error => {
+                console.log('Error checking unread messages:', error);
+            });
+        }
+
+        // Check for unread messages on page load and periodically
+        document.addEventListener('DOMContentLoaded', function() {
+            checkUnreadMessages();
+            // Check every 30 seconds
+            setInterval(checkUnreadMessages, 30000);
         });
     </script>
 </body>

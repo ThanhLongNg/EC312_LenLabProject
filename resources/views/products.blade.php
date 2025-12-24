@@ -190,8 +190,9 @@
                         </span>
                     </button>
                     @auth
-                        <button class="flex items-center justify-center size-10 rounded-full hover:bg-white/10 transition-colors" onclick="window.location.href='/profile'">
+                        <button class="flex items-center justify-center size-10 rounded-full hover:bg-white/10 transition-colors relative" onclick="window.location.href='/profile'">
                             <span class="material-symbols-outlined text-white">account_circle</span>
+                            <span id="header-requests-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium hidden"></span>
                         </button>
                     @else
                         <button class="flex items-center justify-center size-10 rounded-full hover:bg-white/10 transition-colors" onclick="showLoginPopup()">
@@ -447,6 +448,13 @@
                                     <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">cloud_download</span>
                                     <span class="text-white font-medium">Sản phẩm số</span>
                                 </a>
+                                @auth
+                                <a href="/my-requests" class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/10 transition-all duration-200 group">
+                                    <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">assignment</span>
+                                    <span class="text-white font-medium">Yêu cầu của tôi</span>
+                                    <span id="mobile-requests-badge" class="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium hidden"></span>
+                                </a>
+                                @endauth
                                 <a href="/gioi-thieu" class="flex items-center gap-4 p-3 rounded-xl hover:bg-white/10 transition-all duration-200 group">
                                     <span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">info</span>
                                     <span class="text-white font-medium">Giới thiệu</span>
@@ -903,5 +911,79 @@
 
     <!-- Chatbot Widget -->
     @include('components.chatbot')
+
+    <!-- Notification Checking Script -->
+    @auth
+    <script>
+    // Check for unread messages and update notification badges
+    function checkUnreadMessages() {
+        fetch('/api/my-requests/unread-count', {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.unread_count > 0) {
+                // Update header badge
+                const headerBadge = document.getElementById('header-requests-badge');
+                if (headerBadge) {
+                    headerBadge.textContent = data.unread_count;
+                    headerBadge.classList.remove('hidden');
+                }
+                
+                // Update mobile menu badge
+                const mobileBadge = document.getElementById('mobile-requests-badge');
+                if (mobileBadge) {
+                    mobileBadge.textContent = data.unread_count + ' mới';
+                    mobileBadge.classList.remove('hidden');
+                }
+            } else {
+                // Hide badges if no unread messages
+                const headerBadge = document.getElementById('header-requests-badge');
+                const mobileBadge = document.getElementById('mobile-requests-badge');
+                if (headerBadge) headerBadge.classList.add('hidden');
+                if (mobileBadge) mobileBadge.classList.add('hidden');
+            }
+        })
+        .catch(error => {
+            console.log('Error checking unread messages:', error);
+        });
+    }
+
+    // Check for unread messages on page load and periodically
+    $(document).ready(function() {
+        checkUnreadMessages();
+        // Check every 30 seconds
+        setInterval(checkUnreadMessages, 30000);
+    });
+    </script>
+    @endauth
+
+    <!-- Service Worker Registration -->
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            // First, unregister any existing service workers that might be causing issues
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    console.log('Unregistering existing service worker:', registration.scope);
+                    registration.unregister();
+                }
+                
+                // Then register our new service worker
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(function(err) {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        });
+    }
+    </script>
 </body>
 </html>
