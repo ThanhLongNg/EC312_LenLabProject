@@ -24,7 +24,7 @@ class PostContentHelper
             $imgPath = $p->image ?? $p->thumbnail ?? null; // ví dụ
             $priceVal = $p->price ?? $p->price_sale ?? null;
 
-            $img = $imgPath ? asset('product-img/' . $imgPath) : '';
+            $img = $imgPath ? asset('storage/products/' . $imgPath) : '';
             $price = $priceVal ? number_format((float)$priceVal, 0, ',', '.') . 'đ' : '';
 
             $imgHtml = $img

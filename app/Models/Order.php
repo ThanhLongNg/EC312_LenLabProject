@@ -14,6 +14,7 @@ class Order extends Model
     protected $keyType = 'string';
     protected $fillable = [
         'order_id',
+        'order_code',   // Thêm order_code
         'user_id',
         'status',
         'payment_method',
@@ -30,14 +31,16 @@ class Order extends Model
         'phone',
         'province',
         'ward',         // Thêm cột ward
-        'specific_address'
+        'specific_address',
+        'shipping_address'  // Thêm shipping_address dạng text đầy đủ
     ];
 
     protected $casts = [
         'subtotal' => 'decimal:2',
         'shipping_fee' => 'decimal:2',
         'discount_amount' => 'decimal:2',
-        'total_amount' => 'decimal:2' // Sử dụng total_amount thay vì total
+        'total_amount' => 'decimal:2', // Sử dụng total_amount thay vì total
+        'shipping_address' => 'array'   // Cast shipping_address thành array
     ];
 
     /**
@@ -50,6 +53,11 @@ class Order extends Model
         static::creating(function ($order) {
             if (empty($order->order_id)) {
                 $order->order_id = self::generateOrderId();
+            }
+            
+            // Tự động tạo order_code nếu chưa có
+            if (empty($order->order_code)) {
+                $order->order_code = $order->order_id;
             }
         });
     }

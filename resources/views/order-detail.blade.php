@@ -259,7 +259,7 @@
                 <div class="product-item-container">
                     <div class="product-item hover:bg-gray-700/30 transition-colors rounded-lg">
                         <div class="flex items-center flex-1 cursor-pointer" onclick="viewProduct({{ $item['product_id'] }})">
-                            <img src="/PRODUCT-IMG/{{ $item['image'] ?? 'default.jpg' }}" 
+                            <img src="/storage/products/{{ $item['image'] ?? 'default.jpg' }}?v={{ time() }}" 
                                  alt="{{ $item['name'] }}" 
                                  class="w-15 h-15 object-cover rounded-lg flex-shrink-0"
                                  style="width: 60px; height: 60px; min-width: 60px; min-height: 60px;"

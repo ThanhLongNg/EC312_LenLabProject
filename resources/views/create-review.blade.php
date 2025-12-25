@@ -74,7 +74,7 @@
         <!-- Product Info -->
         <div class="p-4 border-b border-gray-700">
             <div class="flex items-center gap-3">
-                <img src="/PRODUCT-IMG/{{ $product->image ?? 'default.jpg' }}" 
+                <img src="/storage/products/{{ $product->image ?? 'default.jpg' }}?v={{ $product->updated_at?->timestamp ?? time() }}" 
                      alt="{{ $product->name }}" 
                      class="w-16 h-16 object-cover rounded-lg"
                      onerror="this.src='https://via.placeholder.com/64x64/FAC638/FFFFFF?text={{ urlencode(substr($product->name, 0, 2)) }}'">

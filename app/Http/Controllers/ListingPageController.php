@@ -22,7 +22,7 @@ class ListingPageController extends Controller
         }
 
         $products = $query
-            ->select('id', 'name', 'image', 'price', 'category')
+            ->select('id', 'name', 'image', 'price', 'category', 'updated_at')
             ->orderBy('id', 'desc')
             ->get();
 

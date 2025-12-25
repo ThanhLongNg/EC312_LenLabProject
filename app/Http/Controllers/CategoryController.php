@@ -85,7 +85,8 @@ class CategoryController extends Controller
                         'price' => (float) ($product->price ?? 0),
                         'image' => $product->image ?? null,
                         'description' => $product->description ?? '',
-                        'quantity' => $product->quantity ?? 0
+                        'quantity' => $product->quantity ?? 0,
+                        'updated_at' => $product->updated_at
                     ];
                 });
             

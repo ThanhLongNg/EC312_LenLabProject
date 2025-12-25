@@ -43,47 +43,19 @@ class ProductPageController extends Controller
     public function apiIndex(Request $request)
     {
         try {
-            \Log::info('API Products request:', $request->all());
-            
-            $query = Product::active(); // Chỉ lấy sản phẩm active
+            $query = Product::where('is_active', true);
             
             // Filter theo category
             if ($request->has('category') && $request->category && $request->category !== 'all') {
-                \Log::info('Filtering by category:', ['category' => $request->category]);
                 $query->where('category_id', $request->category);
-            } else {
-                \Log::info('No category filter applied');
             }
             
             // Tìm kiếm theo từ khóa
             if ($request->has('keyword') && $request->keyword) {
                 $query->where('name', 'like', '%' . $request->keyword . '%');
-                
-                // Kiểm tra xem có cột category không
-                if (\Schema::hasColumn('products', 'category')) {
-                    $query->orWhere('category', 'like', '%' . $request->keyword . '%');
-                }
             }
             
-            // Filter theo rating
-            if ($request->has('min_rating') && $request->min_rating) {
-                $minRating = (float) $request->min_rating;
-                $query->whereHas('comments', function($q) use ($minRating) {
-                    $q->where('is_verified', 1)
-                      ->where('is_hidden', 0)
-                      ->havingRaw('AVG(rating) >= ?', [$minRating]);
-                });
-            }
-            
-            // Filter theo số lượt mua (dựa trên order_items)
-            if ($request->has('min_sold') && $request->min_sold) {
-                $minSold = (int) $request->min_sold;
-                $query->whereHas('orderItems', function($q) use ($minSold) {
-                    $q->havingRaw('SUM(quantity) >= ?', [$minSold]);
-                });
-            }
-            
-            // Sorting - đơn giản hóa để tránh conflict với filter
+            // Sorting
             if ($request->has('sort')) {
                 switch($request->sort) {
                     case 'price-asc':
@@ -106,39 +78,25 @@ class ProductPageController extends Controller
                 $query->orderBy('id', 'desc');
             }
             
-            $products = $query->with('variants')->get()->map(function($product) {
-                // Lấy category từ cột category hoặc từ quan hệ category_id
+            $products = $query->get();
+            
+            $mappedProducts = $products->map(function($product) {
+                // Map category_id to category name
+                $categoryMap = [
+                    1 => 'Nguyên phụ liệu',
+                    2 => 'Đồ trang trí', 
+                    3 => 'Thời trang len',
+                    4 => 'Combo tự làm',
+                    5 => 'Sách hướng dẫn móc len',
+                    6 => 'Thú bông len'
+                ];
+                
                 $category = 'Chưa phân loại';
                 if (isset($product->category) && $product->category) {
                     $category = $product->category;
                 } elseif (isset($product->category_id)) {
-                    // Map category_id to category name
-                    $categoryMap = [
-                        1 => 'Nguyên phụ liệu',
-                        2 => 'Đồ trang trí', 
-                        3 => 'Thời trang len',
-                        4 => 'Combo tự làm',
-                        5 => 'Sách hướng dẫn móc len',
-                        6 => 'Thú bông len'
-                    ];
                     $category = $categoryMap[$product->category_id] ?? 'Chưa phân loại';
                 }
-                
-                // Tính rating trung bình
-                $averageRating = \App\Models\Comment::where('product_id', $product->id)
-                    ->where('is_verified', 1)
-                    ->where('is_hidden', 0)
-                    ->avg('rating') ?? 0;
-                
-                // Tính tổng số lượng đã bán
-                $totalSold = \App\Models\OrderItem::where('product_id', $product->id)
-                    ->sum('quantity') ?? 0;
-                
-                // Đếm số lượt đánh giá
-                $reviewCount = \App\Models\Comment::where('product_id', $product->id)
-                    ->where('is_verified', 1)
-                    ->where('is_hidden', 0)
-                    ->count();
                 
                 return [
                     'id' => $product->id,
@@ -146,44 +104,21 @@ class ProductPageController extends Controller
                     'price' => (float) ($product->price ?? 0),
                     'category' => $category,
                     'image' => $product->image ?? 'default.jpg',
+                    'updated_at' => time(),
                     'is_new' => isset($product->new) && ($product->new == 1 || $product->new == '1'),
-                    'average_rating' => round($averageRating, 1),
-                    'review_count' => $reviewCount,
-                    'total_sold' => $totalSold,
-                    'has_variants' => $product->variants->count() > 0,
-                    'variants' => $product->variants->map(function($variant) {
-                        return [
-                            'id' => $variant->id,
-                            'variant_name' => $variant->variant_name,
-                            'color' => $variant->color,
-                            'size' => $variant->size,
-                            'price' => $variant->price
-                        ];
-                    })
+                    'quantity' => $product->quantity ?? 0
                 ];
             });
             
-            // Sort sau khi lấy data để tránh conflict với filter
-            if ($request->has('sort')) {
-                switch($request->sort) {
-                    case 'rating-desc':
-                        $products = $products->sortByDesc('average_rating')->values();
-                        break;
-                    case 'sold-desc':
-                        $products = $products->sortByDesc('total_sold')->values();
-                        break;
-                }
-            }
-            
             return response()->json([
-                'products' => $products
+                'products' => $mappedProducts
             ]);
             
         } catch (\Exception $e) {
             return response()->json([
                 'products' => [],
                 'error' => $e->getMessage()
-            ]);
+            ], 500);
         }
     }
     

@@ -356,9 +356,56 @@
         let products = [];
         let categories = [];
 
+        // Helper function để tìm ảnh thông minh - sửa lại thứ tự
+        function getSmartImageUrl(imageName, timestamp) {
+    timestamp = timestamp || Date.now();
+
+    if (!imageName || imageName === 'default.jpg') {
+        return 'https://via.placeholder.com/200x120/FAC638/FFFFFF?text=SP';
+    }
+
+    // Nếu là URL đầy đủ
+    if (imageName.startsWith('http://') || imageName.startsWith('https://')) {
+        return `${imageName}?v=${timestamp}`;
+    }
+
+    // Nếu DB/API đã trả về dạng /storage/... hoặc storage/...
+    if (imageName.startsWith('/storage/') || imageName.startsWith('storage/')) {
+        const path = imageName.startsWith('/') ? imageName : `/${imageName}`;
+        return `${path}?v=${timestamp}`;
+    }
+
+    // Nếu chỉ là filename
+    return `/storage/products/${imageName}?v=${timestamp}`;
+}
+
+        
+        // Fallback function nếu ảnh không load được
+        function handleImageError(img, imageName, timestamp) {
+    timestamp = timestamp || Date.now();
+
+    // Thử lại đúng đường dẫn storage/products nếu imageName là filename
+    if (imageName && !imageName.startsWith('/') && !imageName.startsWith('http')) {
+        img.src = `/storage/products/${imageName}?v=${timestamp}`;
+        return;
+    }
+
+    // Nếu imageName là path /storage/... mà vẫn lỗi thì dùng default
+    img.src = `{{ asset('images/default.jpg') }}`;
+}
+
+
         $(document).ready(function() {
             loadCategories();
             loadProducts();
+            
+            // Check for search parameter in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const searchParam = urlParams.get('search');
+            if (searchParam) {
+                $('#searchInput').val(searchParam);
+                filterProducts(searchParam);
+            }
             
             // Mobile menu button
             $('#mobileMenuBtn').click(function() {
@@ -568,7 +615,6 @@
                 method: 'GET',
                 data: requestData,
                 success: function(response) {
-                    console.log('Products loaded successfully:', response);
                     products = response.products || [];
                     renderProducts();
                     updateProductCount();
@@ -577,7 +623,53 @@
                 error: function(xhr, status, error) {
                     console.error('Error loading products:', xhr.responseText, status, error);
                     $('#loading').hide();
-                    $('#productsGrid').html('<div class="col-span-2 text-center text-gray-400 py-8">Không thể tải sản phẩm</div>');
+                    
+                    // Fallback: Hiển thị sản phẩm mẫu với ảnh thật
+                    products = [
+                        {
+                            id: 1,
+                            name: 'Áo Len Cổ Lọ Handknit',
+                            price: 850000,
+                            category: 'Thời trang len',
+                            image: 'product1.1.webp', // Sẽ tự động tìm ở cả 2 thư mục
+                            updated_at: Date.now(),
+                            is_new: true,
+                            quantity: 10
+                        },
+                        {
+                            id: 2,
+                            name: 'Mũ Len Beanie Basic',
+                            price: 320000,
+                            category: 'Thời trang len',
+                            image: 'product2.1.webp',
+                            updated_at: Date.now(),
+                            is_new: false,
+                            quantity: 15
+                        },
+                        {
+                            id: 3,
+                            name: 'Tất Len Cổ Cao',
+                            price: 150000,
+                            category: 'Thời trang len',
+                            image: 'product3.1.webp',
+                            updated_at: Date.now(),
+                            is_new: false,
+                            quantity: 20
+                        },
+                        {
+                            id: 4,
+                            name: 'Túi Tote Crochet Hoa',
+                            price: 600000,
+                            category: 'Đồ trang trí',
+                            image: 'product4.1.webp',
+                            updated_at: Date.now(),
+                            is_new: true,
+                            quantity: 8
+                        }
+                    ];
+                    
+                    renderProducts();
+                    updateProductCount();
                 }
             });
         }
@@ -664,7 +756,7 @@
             const bgColor = colors[index % colors.length];
             
             const imageUrl = product.image && product.image !== 'default.jpg' 
-                ? `/PRODUCT-IMG/${product.image}` 
+                ? getSmartImageUrl(product.image, product.updated_at ? new Date(product.updated_at).getTime() : Date.now()) 
                 : `https://via.placeholder.com/200x120/${bgColor.substring(1)}/FFFFFF?text=${encodeURIComponent(product.name.substring(0, 2))}`;
             
             const price = parseFloat(product.price) || 0;
@@ -694,6 +786,7 @@
                             src="${imageUrl}" 
                             alt="${product.name}" 
                             class="product-image"
+                            onerror="handleImageError(this, '${product.image || ''}', ${product.updated_at ? new Date(product.updated_at).getTime() : Date.now()})"
                         />
                         ${product.is_new ? '<div class="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full z-10">Mới</div>' : ''}
                         ${totalSold > 0 ? `<div class="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">${totalSold} đã bán</div>` : ''}

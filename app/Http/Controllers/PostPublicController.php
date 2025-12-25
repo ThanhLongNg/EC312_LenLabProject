@@ -59,7 +59,7 @@ class PostPublicController extends Controller
                         </div>';
             }
 
-            $img = $product->image ? asset('product-img/' . $product->image) : asset('placeholder.png');
+            $img = $product->image ? asset('storage/products/' . $product->image) : asset('placeholder.png');
             $price = $product->price ? number_format($product->price, 0, ',', '.') . '₫' : 'Liên hệ';
 
             return '

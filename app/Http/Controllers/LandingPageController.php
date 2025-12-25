@@ -18,9 +18,19 @@ class LandingPageController extends Controller
 
     public function getProducts()
     {
-        $products = Product::orderBy('created_at', 'desc')
+        $products = Product::where('is_active', true)
+            ->orderBy('id', 'desc')
             ->take(4)
-            ->get(['id', 'name', 'image']);
+            ->get(['id', 'name', 'image', 'price'])
+            ->map(function($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'image' => $product->image,
+                    'price' => $product->price,
+                    'updated_at' => time() // Sử dụng timestamp hiện tại
+                ];
+            });
 
         return response()->json([
             'products' => $products

@@ -461,7 +461,7 @@
 <div class="scroll-indicator" id="scrollProgress"></div>
 
 <!-- Header -->
-<header class="sticky top-0 z-50 w-full bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-gray-200 dark:border-white/5 transition-all duration-300">
+<header class="sticky top-0 z-[999] w-full bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md border-b border-gray-200 dark:border-white/5 transition-all duration-300">
     <div class="px-4 py-3 flex items-center justify-between gap-3">
         <div class="flex items-center gap-3">
             <button class="flex items-center justify-center size-10 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors" id="mobileMenuBtn">
@@ -518,7 +518,7 @@
                     ? asset('storage/'.$heroBanner->image).'?v='.optional($heroBanner->updated_at)->timestamp
                     : asset('banner.png');
             @endphp
-            <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" style="background-image: url('{{ $heroUrl }}')"></div>
+            <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105 pointer-events-none" style="background-image: url('{{ $heroUrl }}')"></div>
             @if($heroBanner?->link)
                 {{-- nếu muốn click banner --}}
                 <a href="{{ $heroBanner->link }}" class="absolute inset-0 z-20"></a>
@@ -673,6 +673,34 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function() {
+    // Helper function để tìm ảnh thông minh
+    function getSmartImageUrl(imageName, timestamp) {
+        if (!imageName || imageName === 'default.jpg') {
+            return 'https://via.placeholder.com/200x120/FAC638/FFFFFF?text=SP';
+        }
+        
+        timestamp = timestamp || Date.now();
+        
+        // Check if imageName already contains the full path
+        var imgUrl = (imageName || '').indexOf('/storage/') === 0
+            ? imageName
+            : '/storage/products/' + imageName;
+            
+        return imgUrl + '?v=' + timestamp;
+    }
+    
+    // Fallback function nếu ảnh không load được
+    function handleImageError(img, imageName, timestamp) {
+        // Nếu đang dùng storage/products, thử product-img
+        if (img.src.indexOf('/storage/products/') !== -1) {
+            img.src = '/product-img/' + imageName + '?v=' + (timestamp || Date.now());
+        } else if (img.src.indexOf('/product-img/') !== -1) {
+            // Nếu cả 2 đều fail, dùng placeholder
+            var productName = img.alt || 'SP';
+            img.src = 'https://via.placeholder.com/200x120/FAC638/FFFFFF?text=' + encodeURIComponent(productName.substring(0, 2));
+        }
+    }
+    
     // Load categories from database
     function loadCategories() {
         $.get('/api/categories', function(response) {
@@ -729,7 +757,7 @@ $(document).ready(function() {
                     <div class="group relative flex flex-col gap-3 product-item" data-product-id="${item.id}">
                         <div class="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-gray-200 dark:bg-gray-800 cursor-pointer">
                             ${item.image ? 
-                                `<img alt="${item.name}" class="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-110" src="/product-img/${item.image}"/>` :
+                                `<img alt="${item.name}" class="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-110" src="${getSmartImageUrl(item.image, item.updated_at ? new Date(item.updated_at).getTime() : Date.now())}" onerror="handleImageError(this, '${item.image}', ${item.updated_at ? new Date(item.updated_at).getTime() : Date.now()})"/>` :
                                 `<div class="h-full w-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
                                     <span class="material-symbols-outlined text-4xl text-gray-400">image</span>
                                 </div>`
@@ -1205,8 +1233,11 @@ $(document).on('keydown', function(e) {
     }
 });
 
-// Check for unread messages and update notification badges
+</script>
+
+<!-- Check for unread messages and update notification badges -->
 @auth
+<script>
 function checkUnreadMessages() {
     fetch('/api/my-requests/unread-count', {
         method: 'GET',
@@ -1250,8 +1281,8 @@ $(document).ready(function() {
     // Check every 30 seconds
     setInterval(checkUnreadMessages, 30000);
 });
-@endauth
 </script>
+@endauth
 
 <!-- Login/Register Popup -->
 <div id="loginPopup" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] hidden items-center justify-center p-4">

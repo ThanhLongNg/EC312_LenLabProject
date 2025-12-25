@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\PostController as AdminPostController;
 use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\ChatbotController as AdminChatbotController;
+use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
 
 // ✅ Site controllers
 use App\Http\Controllers\ProductPageController;
@@ -131,7 +132,11 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     Route::get('/customers', [CustomerController::class, 'index'])->name('admin.customers.index');
     Route::get('/customers/create', [CustomerController::class, 'create'])->name('admin.customers.create');
     Route::post('/customers', [CustomerController::class, 'store'])->name('admin.customers.store');
+    Route::get('/customers/{id}', [CustomerController::class, 'show'])->name('admin.customers.show');
+    Route::get('/customers/{id}/edit', [CustomerController::class, 'edit'])->name('admin.customers.edit');
+    Route::put('/customers/{id}', [CustomerController::class, 'update'])->name('admin.customers.update');
     Route::delete('/customers/{id}', [CustomerController::class, 'destroy'])->name('admin.customers.destroy');
+    Route::delete('/customers', [CustomerController::class, 'bulkDelete'])->name('admin.customers.bulk-delete');
 
     // Orders
     Route::get('/orders', [OrderController::class, 'index'])->name('admin.orders.index');
@@ -168,6 +173,11 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     Route::delete('/posts/{id}', [AdminPostController::class, 'destroy'])->name('admin.posts.destroy');
     Route::delete('/posts', [AdminPostController::class, 'bulkDelete'])->name('admin.posts.bulkDelete');
 
+    // Reviews Management
+    Route::get('/reviews', [AdminReviewController::class, 'index'])->name('admin.reviews.index');
+    Route::post('/reviews/{comment}/approve', [AdminReviewController::class, 'approve'])->name('admin.reviews.approve');
+    Route::post('/reviews/{comment}/hide', [AdminReviewController::class, 'hide'])->name('admin.reviews.hide');
+
     // Banners
     Route::get('/banners', [BannerController::class, 'edit'])->name('admin.banners.edit');
     Route::put('/banners', [BannerController::class, 'update'])->name('admin.banners.update');
@@ -192,12 +202,35 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     
     // FAQ Management
     Route::get('/faq', [App\Http\Controllers\Admin\FaqController::class, 'index'])->name('admin.faq.index');
+    
+    // Abandoned Cart Management
+    Route::get('/abandoned-carts', [App\Http\Controllers\Admin\AbandonedCartController::class, 'index'])->name('admin.abandoned-carts.index');
+    Route::post('/abandoned-carts/{user}/send-reminder', [App\Http\Controllers\Admin\AbandonedCartController::class, 'sendReminder'])->name('admin.abandoned-carts.send-reminder');
     Route::get('/faq/list', [App\Http\Controllers\Admin\FaqController::class, 'list'])->name('admin.faq.list');
     Route::get('/faq/create', [App\Http\Controllers\Admin\FaqController::class, 'create'])->name('admin.faq.create');
     Route::post('/faq', [App\Http\Controllers\Admin\FaqController::class, 'store'])->name('admin.faq.store');
     Route::get('/faq/{id}/edit', [App\Http\Controllers\Admin\FaqController::class, 'edit'])->name('admin.faq.edit');
     Route::put('/faq/{id}', [App\Http\Controllers\Admin\FaqController::class, 'update'])->name('admin.faq.update');
     Route::delete('/faq/{id}', [App\Http\Controllers\Admin\FaqController::class, 'destroy'])->name('admin.faq.destroy');
+
+    // Vouchers Management
+    Route::get('/vouchers', [App\Http\Controllers\Admin\VoucherController::class, 'index'])->name('admin.vouchers.index');
+    Route::get('/vouchers/list', [App\Http\Controllers\Admin\VoucherController::class, 'list'])->name('admin.vouchers.list');
+    Route::get('/vouchers/create', [App\Http\Controllers\Admin\VoucherController::class, 'create'])->name('admin.vouchers.create');
+    Route::post('/vouchers', [App\Http\Controllers\Admin\VoucherController::class, 'store'])->name('admin.vouchers.store');
+    Route::get('/vouchers/{id}/edit', [App\Http\Controllers\Admin\VoucherController::class, 'edit'])->name('admin.vouchers.edit');
+    Route::put('/vouchers/{id}', [App\Http\Controllers\Admin\VoucherController::class, 'update'])->name('admin.vouchers.update');
+    Route::delete('/vouchers/{id}', [App\Http\Controllers\Admin\VoucherController::class, 'destroy'])->name('admin.vouchers.destroy');
+    Route::post('/vouchers/{id}/toggle-active', [App\Http\Controllers\Admin\VoucherController::class, 'toggleActive'])->name('admin.vouchers.toggleActive');
+
+    // Reviews Management
+    Route::get('/reviews', [App\Http\Controllers\Admin\ReviewController::class, 'index'])->name('admin.reviews.index');
+    Route::get('/reviews/list', [App\Http\Controllers\Admin\ReviewController::class, 'list'])->name('admin.reviews.list');
+    Route::get('/reviews/{id}', [App\Http\Controllers\Admin\ReviewController::class, 'show'])->name('admin.reviews.show');
+    Route::put('/reviews/{id}/approve', [App\Http\Controllers\Admin\ReviewController::class, 'approve'])->name('admin.reviews.approve');
+    Route::put('/reviews/{id}/reject', [App\Http\Controllers\Admin\ReviewController::class, 'reject'])->name('admin.reviews.reject');
+    Route::delete('/reviews/{id}', [App\Http\Controllers\Admin\ReviewController::class, 'destroy'])->name('admin.reviews.destroy');
+    Route::delete('/reviews', [App\Http\Controllers\Admin\ReviewController::class, 'bulkDelete'])->name('admin.reviews.bulkDelete');
     Route::delete('/faq', [App\Http\Controllers\Admin\FaqController::class, 'bulkDelete'])->name('admin.faq.bulkDelete');
     Route::post('/faq/{id}/toggle-active', [App\Http\Controllers\Admin\FaqController::class, 'toggleActive'])->name('admin.faq.toggleActive');
     Route::get('/faq/statistics', [App\Http\Controllers\Admin\FaqController::class, 'statistics'])->name('admin.faq.statistics');
@@ -248,10 +281,10 @@ Route::middleware('auth')->group(function () {
 });
 
 // API Routes for user-facing website
-Route::prefix('api')->group(function () {
+Route::prefix('api')->middleware('web')->group(function () {
     Route::get('/products', [App\Http\Controllers\ProductPageController::class, 'apiIndex']);
     Route::get('/products/{id}/variants', [App\Http\Controllers\ProductPageController::class, 'getVariants']);
-    Route::get('/landing/products', [App\Http\Controllers\ProductPageController::class, 'landingProducts']);
+    Route::get('/landing/products', [App\Http\Controllers\LandingPageController::class, 'getProducts']);
     Route::get('/categories', [App\Http\Controllers\CategoryController::class, 'apiIndex']);
     Route::get('/product-categories', [App\Http\Controllers\CategoryController::class, 'apiIndex']);
     Route::get('/categories/{id}/products', [App\Http\Controllers\CategoryController::class, 'getProductsByCategory']);
@@ -302,6 +335,7 @@ Route::prefix('api')->group(function () {
         Route::post('/checkout/prepare-bank-transfer', [App\Http\Controllers\CheckoutController::class, 'prepareBankTransfer']);
         Route::post('/checkout/complete-bank-transfer', [App\Http\Controllers\CheckoutController::class, 'completeBankTransfer']);
         Route::post('/checkout/create-order', [App\Http\Controllers\CheckoutController::class, 'createOrder']);
+        Route::get('/checkout/validate-session', [App\Http\Controllers\CheckoutController::class, 'validateSession']);
         
         // My Requests API
         Route::get('/my-requests/unread-count', [App\Http\Controllers\MyRequestsController::class, 'getUnreadCount']);

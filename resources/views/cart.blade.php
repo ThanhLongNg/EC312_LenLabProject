@@ -381,7 +381,7 @@
             cart.forEach(item => {
                 const product = item.product || {};
                 const imageUrl = product.image && product.image !== 'default.jpg' 
-                    ? `/PRODUCT-IMG/${product.image}` 
+                    ? `/storage/products/${product.image}` 
                     : `https://via.placeholder.com/80x80/FAC638/FFFFFF?text=${encodeURIComponent((product.name || 'SP').substring(0, 2))}`;
                 
                 const price = parseFloat(product.price) || 0;
