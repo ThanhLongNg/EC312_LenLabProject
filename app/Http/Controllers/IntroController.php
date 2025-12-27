@@ -16,7 +16,7 @@ class IntroController extends Controller
     {
         $products = Product::orderBy('created_at', 'desc')
             ->take(4)
-            ->get(['id', 'name', 'image']);
+            ->get(['id', 'name', 'image', 'updated_at', 'price']);
 
         return response()->json([
             'products' => $products

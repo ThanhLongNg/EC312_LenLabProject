@@ -309,7 +309,7 @@
             
             @foreach($relatedProducts as $product)
             <div class="product-item">
-                <img src="{{ $product['image'] ? asset('product-img/' . $product['image']) : asset('placeholder.png') }}" 
+                <img src="{{ $product['image'] ? asset('storage/products/' . $product['image']) : asset('placeholder.png') }}" 
                      alt="{{ $product['name'] }}" 
                      class="product-image">
                 <div class="product-info">

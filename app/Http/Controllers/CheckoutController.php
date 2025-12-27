@@ -512,6 +512,9 @@ class CheckoutController extends Controller
             $voucherDiscount = session('voucher_discount', 0);
             $total = $subtotal + $shippingFee - $voucherDiscount;
 
+            // Store total in session for later use
+            session(['temp_order_total' => $total]);
+
             return response()->json([
                 'success' => true,
                 'order_code' => $orderCode,
@@ -561,21 +564,50 @@ class CheckoutController extends Controller
                 }
             }
 
+            // Tạo Custom Product Request để admin theo dõi
+            $customRequest = \App\Models\CustomProductRequest::create([
+                'user_id' => Auth::id(),
+                'session_id' => session()->getId(),
+                'product_type' => 'Đơn hàng chuyển khoản',
+                'description' => 'Đơn hàng thanh toán chuyển khoản cần xác nhận từ admin',
+                'status' => 'payment_submitted',
+                'order_code' => $orderCode,
+                'payment_info' => [
+                    'method' => 'bank_transfer',
+                    'order_code' => $orderCode,
+                    'amount' => session('temp_order_total', 0)
+                ],
+                'payment_bill_image' => $transferImagePath,
+                'payment_submitted_at' => now(),
+                'contact_info' => [
+                    'name' => Auth::user()->name,
+                    'email' => Auth::user()->email,
+                    'phone' => Auth::user()->phone ?? ''
+                ]
+            ]);
+
+            Log::info('Custom request created for bank transfer', [
+                'custom_request_id' => $customRequest->id,
+                'order_code' => $orderCode,
+                'user_id' => Auth::id()
+            ]);
+
             return response()->json([
                 'success' => true,
                 'order_code' => $orderCode,
-                'redirect_url' => '/order-success?order_code=' . $orderCode
+                'custom_request_id' => $customRequest->id,
+                'redirect_url' => '/admin/chatbot/custom-requests#'
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error completing bank transfer:', [
+            Log::error('Error completing bank transfer', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Có lỗi xảy ra: ' . $e->getMessage()
+                'message' => 'Có lỗi xảy ra, vui lòng thử lại.'
             ], 500);
         }
     }

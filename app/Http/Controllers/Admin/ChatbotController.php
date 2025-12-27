@@ -9,6 +9,7 @@ use App\Models\ChatSupportLog;
 use App\Models\MaterialEstimate;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
 class ChatbotController extends Controller
@@ -346,22 +347,57 @@ class ChatbotController extends Controller
     /**
      * Display chat logs
      */
-    public function chatLogs()
+    public function chatLogs(Request $request)
     {
-        $logs = ChatLog::with('user')
-            ->orderBy('created_at', 'desc')
-            ->paginate(50);
-
+        $query = ChatLog::query()->with('user');
+        
+        if ($request->filled('q')) {
+            $term = $request->q;
+            $query->where(function ($q) use ($term) {
+                $q->where('user_message', 'like', "%{$term}%")
+                  ->orWhere('bot_reply', 'like', "%{$term}%")
+                  ->orWhere('intent', 'like', "%{$term}%")
+                  ->orWhereHas('user', function ($u) use ($term) {
+                      $u->where('name', 'like', "%{$term}%")
+                        ->orWhere('email', 'like', "%{$term}%");
+                  });
+            });
+        }
+        
+        if ($request->filled('intent')) {
+            $query->where('intent', $request->intent);
+        }
+        
+        if ($request->filled('from')) {
+            $query->whereDate('created_at', '>=', $request->from);
+        }
+        
+        if ($request->filled('to')) {
+            $query->whereDate('created_at', '<=', $request->to);
+        }
+        
+        // logs
+        $logs = (clone $query)
+            ->latest('created_at')
+            ->paginate(20)
+            ->appends($request->query());
+        
+        // stats theo intent (theo đúng bộ lọc hiện tại)
         $stats = [
-            'total_conversations' => ChatLog::distinct('session_id')->count(),
-            'today_messages' => ChatLog::whereDate('created_at', today())->count(),
-            'intents_breakdown' => ChatLog::selectRaw('intent, COUNT(*) as count')
+            'by_intent' => (clone $query)
+                ->select('intent')
                 ->groupBy('intent')
+                ->selectRaw('intent, COUNT(*) as count')
                 ->pluck('count', 'intent')
-                ->toArray()
+                ->toArray(),
         ];
-
-        return view('admin.chatbot.chat-logs', compact('logs', 'stats'));
+        
+        return view('admin.chatbot.chat-logs', compact('logs', 'stats'))
+            ->with([
+                'pageHeading' => 'Chat Logs',
+                'pageDescription' => 'Theo dõi lịch sử chat và thống kê nhanh',
+                'createUrl' => null // No create button for logs
+            ]);
     }
 
     /**
@@ -369,23 +405,39 @@ class ChatbotController extends Controller
      */
     public function materialEstimates()
     {
-        $estimates = MaterialEstimate::with('user')
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        // Check if table exists before querying
+        if (!Schema::hasTable('material_estimates')) {
+            $estimates = collect();
+            $stats = [
+                'total_estimates' => 0,
+                'added_to_cart' => 0,
+                'avg_cost' => 0,
+                'popular_products' => []
+            ];
+        } else {
+            $estimates = MaterialEstimate::with('user')
+                ->orderBy('created_at', 'desc')
+                ->paginate(20);
 
-        $stats = [
-            'total_estimates' => MaterialEstimate::count(),
-            'added_to_cart' => MaterialEstimate::where('added_to_cart', true)->count(),
-            'avg_cost' => MaterialEstimate::avg('total_estimated_cost'),
-            'popular_products' => MaterialEstimate::selectRaw('product_type, COUNT(*) as count')
-                ->groupBy('product_type')
-                ->orderBy('count', 'desc')
-                ->limit(5)
-                ->pluck('count', 'product_type')
-                ->toArray()
-        ];
+            $stats = [
+                'total_estimates' => MaterialEstimate::count(),
+                'added_to_cart' => MaterialEstimate::where('added_to_cart', true)->count(),
+                'avg_cost' => MaterialEstimate::avg('total_estimated_cost'),
+                'popular_products' => MaterialEstimate::selectRaw('product_type, COUNT(*) as count')
+                    ->groupBy('product_type')
+                    ->orderBy('count', 'desc')
+                    ->limit(5)
+                    ->pluck('count', 'product_type')
+                    ->toArray()
+            ];
+        }
 
-        return view('admin.chatbot.material-estimates', compact('estimates', 'stats'));
+        return view('admin.chatbot.material-estimates', compact('estimates', 'stats'))
+            ->with([
+                'pageHeading' => 'Material Estimates',
+                'pageDescription' => 'Quản lý ước tính vật liệu từ chatbot',
+                'createUrl' => null // No create button for estimates
+            ]);
     }
 
     /**
@@ -430,12 +482,15 @@ class ChatbotController extends Controller
             ->pluck('count', 'status')
             ->toArray();
 
-        // Popular products for estimates
-        $popularEstimates = MaterialEstimate::where('created_at', '>=', $startDate)
-            ->selectRaw('product_type, COUNT(*) as count, AVG(total_estimated_cost) as avg_cost')
-            ->groupBy('product_type')
-            ->orderBy('count', 'desc')
-            ->get();
+        // Popular products for estimates (with table existence check)
+        $popularEstimates = collect();
+        if (Schema::hasTable('material_estimates')) {
+            $popularEstimates = MaterialEstimate::where('created_at', '>=', $startDate)
+                ->selectRaw('product_type, COUNT(*) as count, AVG(total_estimated_cost) as avg_cost')
+                ->groupBy('product_type')
+                ->orderBy('count', 'desc')
+                ->get();
+        }
 
         // Response time analysis (mock data for now)
         $avgResponseTime = '2.3 phút';
@@ -449,7 +504,11 @@ class ChatbotController extends Controller
             'avgResponseTime',
             'satisfactionRate',
             'dateRange'
-        ));
+        ))->with([
+            'pageHeading' => 'Chatbot Analytics',
+            'pageDescription' => 'Thống kê và phân tích hoạt động chatbot',
+            'createUrl' => null // No create button for analytics
+        ]);
     }
 
     /**

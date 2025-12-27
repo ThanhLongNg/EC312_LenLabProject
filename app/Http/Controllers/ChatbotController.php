@@ -13,22 +13,6 @@ use Illuminate\Support\Str;
 
 class ChatbotController extends Controller
 {
-    /**
-     * Lấy FAQ responses từ database thay vì hardcode
-     */
-    private function getFaqResponses(): array
-    {
-        $faqs = FaqItem::active()->byPriority()->get();
-        $responses = [];
-        
-        foreach ($faqs as $faq) {
-            foreach ($faq->keywords as $keyword) {
-                $responses[strtolower($keyword)] = $faq->answer;
-            }
-        }
-        
-        return $responses;
-    }
 
     public function sendMessage(Request $request): JsonResponse
     {
@@ -82,20 +66,12 @@ class ChatbotController extends Controller
         $intent = $this->classifyIntent($userMessage, $sessionId);
         
         // Xử lý theo intent
-        if (str_contains(strtolower($userMessage), 'custom') || str_contains(strtolower($userMessage), 'cá nhân hóa')) {
-            $botReply = $this->handleCustomRequest($userMessage, $sessionId, $userId);
-        } elseif (str_contains(strtolower($userMessage), 'faq') || str_contains(strtolower($userMessage), 'hỏi đáp')) {
-            $botReply = $this->handleFAQ($userMessage);
-        } elseif (str_contains(strtolower($userMessage), 'estimate') || str_contains(strtolower($userMessage), 'ước tính')) {
-            $botReply = $this->handleMaterialEstimate($userMessage, $sessionId, $userId);
-        } else {
-            $botReply = match($intent) {
-                'FAQ' => $this->handleFAQ($userMessage),
-                'CUSTOM_REQUEST' => $this->handleCustomRequest($userMessage, $sessionId, $userId),
-                'MATERIAL_ESTIMATE' => $this->handleMaterialEstimate($userMessage, $sessionId, $userId),
-                default => $this->handleUnknown($userMessage)
-            };
-        }
+        $botReply = match($intent) {
+            'FAQ' => $this->handleFAQ($userMessage),
+            'CUSTOM_REQUEST' => $this->handleCustomRequest($userMessage, $sessionId, $userId),
+            'MATERIAL_ESTIMATE' => $this->handleMaterialEstimate($userMessage, $sessionId, $userId),
+            default => $this->handleUnknown($userMessage)
+        };
 
         // Lưu log chat
         ChatLog::create([
@@ -146,6 +122,19 @@ class ChatbotController extends Controller
         foreach ($materialKeywords as $keyword) {
             if (str_contains($message, $keyword)) {
                 return 'MATERIAL_ESTIMATE';
+            }
+        }
+
+        // Kiểm tra FAQ keywords từ database
+        $faqs = FaqItem::active()->get();
+        foreach ($faqs as $faq) {
+            $keywords = is_array($faq->keywords) ? $faq->keywords : json_decode($faq->keywords ?? '[]', true);
+            
+            foreach (($keywords ?? []) as $keyword) {
+                $keyword = mb_strtolower(trim($keyword));
+                if ($keyword !== '' && mb_strpos($message, $keyword) !== false) {
+                    return 'FAQ';
+                }
             }
         }
 
@@ -503,8 +492,34 @@ class ChatbotController extends Controller
 
     private function handleFAQ(string $message): array
     {
+        $text = mb_strtolower(trim($message));
+        
+        // Lấy FAQ active theo priority
+        $faqs = FaqItem::active()->byPriority()->get();
+        
+        foreach ($faqs as $faq) {
+            $keywords = is_array($faq->keywords) ? $faq->keywords : json_decode($faq->keywords ?? '[]', true);
+            
+            foreach (($keywords ?? []) as $kw) {
+                $kw = mb_strtolower(trim($kw));
+                if ($kw !== '' && mb_strpos($text, $kw) !== false) {
+                    // Tăng usage_count để theo dõi thống kê
+                    $faq->increment('usage_count');
+                    
+                    return [
+                        'message' => $faq->answer,
+                        'context' => [
+                            'faq_id' => $faq->id,
+                            'matched_keyword' => $kw
+                        ]
+                    ];
+                }
+            }
+        }
+        
+        // Fallback nếu không tìm thấy FAQ phù hợp
         return [
-            'message' => 'Tôi có thể trả lời các câu hỏi về sản phẩm, giao hàng, đổi trả. Bạn muốn hỏi gì?'
+            'message' => "Mình chưa có câu trả lời sẵn cho nội dung này 😅\n\n🔍 **Bạn có thể hỏi về:**\n• Giao hàng & vận chuyển\n• Đổi trả sản phẩm\n• Thanh toán\n• Thông tin sản phẩm\n• Chính sách bảo hành\n\nHoặc gõ **\"custom\"** để đặt làm sản phẩm riêng! 🎨"
         ];
     }
 
@@ -517,8 +532,22 @@ class ChatbotController extends Controller
 
     private function handleUnknown(string $message): array
     {
+        // Thử tìm FAQ gần đúng
+        $faqs = FaqItem::active()->byPriority()->limit(3)->get();
+        $suggestions = '';
+        
+        if ($faqs->isNotEmpty()) {
+            $suggestions = "\n\n💡 **Có thể bạn muốn hỏi:**\n";
+            foreach ($faqs as $index => $faq) {
+                $firstKeyword = is_array($faq->keywords) ? 
+                    ($faq->keywords[0] ?? 'FAQ') : 
+                    (json_decode($faq->keywords ?? '[]', true)[0] ?? 'FAQ');
+                $suggestions .= "• " . ucfirst($firstKeyword) . "\n";
+            }
+        }
+        
         return [
-            'message' => 'Xin chào! Tôi có thể giúp bạn:\n\n🔍 Trả lời câu hỏi\n🎨 Đặt làm sản phẩm cá nhân hóa\n📏 Ước tính nguyên liệu\n\nBạn cần hỗ trợ gì? 😊'
+            'message' => "👋 **Xin chào! Tôi là trợ lý ảo của Lenlab**\n\n🤖 **Tôi có thể giúp bạn:**\n\n🔍 **Trả lời câu hỏi** về sản phẩm, giao hàng, đổi trả\n🎨 **Đặt làm sản phẩm cá nhân hóa** (gõ \"custom\")\n📏 **Ước tính nguyên liệu** cần thiết\n💬 **Tư vấn sản phẩm** phù hợp" . $suggestions . "\n\n😊 **Bạn cần hỗ trợ gì ạ?**"
         ];
     }
 

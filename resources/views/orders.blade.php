@@ -122,7 +122,7 @@
                         @endphp
                         
                         @if($firstItem && $firstItem->product_name)
-                        <img src="{{ $firstItem->product_image && $firstItem->product_image !== 'default.jpg' ? '/PRODUCT-IMG/' . $firstItem->product_image : 'https://via.placeholder.com/50x50/FAC638/FFFFFF?text=' . urlencode(substr($firstItem->product_name, 0, 2)) }}" 
+                        <img src="{{ $firstItem->product_image && $firstItem->product_image !== 'default.jpg' ? '/storage/products/' . $firstItem->product_image . '?v=' . time() : 'https://via.placeholder.com/50x50/FAC638/FFFFFF?text=' . urlencode(substr($firstItem->product_name, 0, 2)) }}" 
                              alt="{{ $firstItem->product_name }}" 
                              class="w-12 h-12 object-cover rounded-lg"
                              onerror="this.src='https://via.placeholder.com/50x50/FAC638/FFFFFF?text={{ urlencode(substr($firstItem->product_name, 0, 2)) }}'">

@@ -96,4 +96,44 @@ class Product extends Model
     {
         return count($this->getAllImages()) > 1;
     }
+    
+    /**
+     * Lấy đường dẫn ảnh thông minh - tự động tìm ở cả 2 thư mục
+     * Ưu tiên storage/products trước vì đây là thư mục chính chứa ảnh
+     */
+    public function getImagePath()
+    {
+        if (!$this->image || $this->image === 'default.jpg') {
+            return null;
+        }
+        
+        // Kiểm tra thư mục storage/products trước (thư mục chính)
+        $storagePath = public_path('storage/products/' . $this->image);
+        if (file_exists($storagePath)) {
+            return '/storage/products/' . $this->image;
+        }
+        
+        // Kiểm tra thư mục product-img (thư mục backup)
+        $productImgPath = public_path('product-img/' . $this->image);
+        if (file_exists($productImgPath)) {
+            return '/product-img/' . $this->image;
+        }
+        
+        // Nếu không tìm thấy ở cả 2 thư mục, trả về đường dẫn mặc định
+        return '/storage/products/' . $this->image;
+    }
+    
+    /**
+     * Lấy URL ảnh với cache busting
+     */
+    public function getImageUrl($timestamp = null)
+    {
+        $path = $this->getImagePath();
+        if (!$path) {
+            return null;
+        }
+        
+        $timestamp = $timestamp ?: time();
+        return $path . '?v=' . $timestamp;
+    }
 }

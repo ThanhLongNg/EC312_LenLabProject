@@ -6,25 +6,12 @@
     // Variables for header
     $pageTitle = 'Sản phẩm số';
     $pageHeading = 'Quản lý sản phẩm số';
-    $pageDescription = 'Quản lý sản phẩm số';
-    $createUrl = '/admin/digital-products';
+    $pageDescription = 'Quản lý tài liệu, video và quy trình gửi hàng tự động cho sản phẩm kỹ thuật số';
+    $createUrl = '#';
 @endphp
 
 @section('content')
-<div class="p-6 max-w-6xl mx-auto">
-
-    <!-- Page Header with Description -->
-    <div class="mb-8">
-        <p class="text-gray-600 dark:text-gray-400 text-sm">Quản lý tài liệu, video và quy trình gửi hàng tự động cho sản phẩm kỹ thuật số</p>
-    </div>
-
-    <!-- Add New Product Button -->
-    <div class="mb-6">
-        <button id="add-product-btn" class="inline-flex items-center px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary-hover transition-colors">
-            <span class="material-icons-round mr-2">add</span>
-            Thêm sản phẩm số mới
-        </button>
-    </div>
+<div class="p-6 max-w-full mx-auto">
 
     <!-- Products List -->
     <div class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
@@ -36,37 +23,37 @@
         </div>
         
         <div class="overflow-x-auto">
-            <table class="w-full">
+            <table class="w-full min-w-full">
                 <thead class="bg-gray-50 dark:bg-gray-800/50">
                     <tr class="text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        <th class="px-6 py-3">Sản phẩm</th>
-                        <th class="px-6 py-3">Loại</th>
-                        <th class="px-6 py-3">Giá</th>
-                        <th class="px-6 py-3">Files</th>
-                        <th class="px-6 py-3">Đã bán</th>
-                        <th class="px-6 py-3">Trạng thái</th>
-                        <th class="px-6 py-3">Hành động</th>
+                        <th class="px-4 py-3 w-1/4">Sản phẩm</th>
+                        <th class="px-4 py-3 w-1/8">Loại</th>
+                        <th class="px-4 py-3 w-1/8">Giá</th>
+                        <th class="px-4 py-3 w-1/12">Files</th>
+                        <th class="px-4 py-3 w-1/12">Đã bán</th>
+                        <th class="px-4 py-3 w-1/8">Trạng thái</th>
+                        <th class="px-4 py-3 w-1/6">Hành động</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     @forelse($products as $product)
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                        <td class="px-6 py-4">
+                        <td class="px-4 py-4">
                             <div class="flex items-center">
-                                <div class="w-12 h-12 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center mr-4">
+                                <div class="w-12 h-12 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center mr-4 flex-shrink-0">
                                     @if($product->thumbnail)
                                         <img src="{{ $product->thumbnail_url }}" alt="{{ $product->name }}" class="w-full h-full object-cover rounded-lg">
                                     @else
                                         <span class="material-icons-round text-gray-400">description</span>
                                     @endif
                                 </div>
-                                <div>
-                                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $product->name }}</div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ $product->name }}</div>
                                     <div class="text-xs text-gray-500 dark:text-gray-400">ID: #{{ $product->id }}</div>
                                 </div>
                             </div>
                         </td>
-                        <td class="px-6 py-4">
+                        <td class="px-4 py-4">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                                 @switch($product->type)
                                     @case('course') bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 @break
@@ -81,16 +68,16 @@
                                 @endswitch
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                        <td class="px-4 py-4 text-sm font-medium text-gray-900 dark:text-white">
                             {{ $product->formatted_price }}
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                        <td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
                             {{ count($product->files ?? []) }} files
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                        <td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
                             {{ $product->purchases->count() }}
                         </td>
-                        <td class="px-6 py-4">
+                        <td class="px-4 py-4">
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" class="sr-only peer toggle-active-btn" 
                                        data-id="{{ $product->id }}" 
@@ -98,8 +85,8 @@
                                 <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/30 dark:peer-focus:ring-primary/50 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
                             </label>
                         </td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center gap-2">
+                        <td class="px-4 py-4">
+                            <div class="flex items-center gap-1">
                                 <button class="edit-product-btn p-2 text-gray-400 hover:text-primary transition-colors" 
                                         data-id="{{ $product->id }}" title="Chỉnh sửa">
                                     <span class="material-icons-round text-sm">edit</span>
@@ -117,7 +104,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="px-6 py-12 text-center">
+                        <td colspan="7" class="px-4 py-12 text-center">
                             <div class="flex flex-col items-center gap-3">
                                 <span class="material-icons-round text-4xl text-gray-400">inventory</span>
                                 <p class="text-gray-500 dark:text-gray-400">Chưa có sản phẩm số nào</p>
@@ -135,7 +122,7 @@
 
         <!-- Pagination -->
         @if($products->hasPages())
-        <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+        <div class="px-4 py-4 border-t border-gray-200 dark:border-gray-700">
             {{ $products->links() }}
         </div>
         @endif
@@ -293,8 +280,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('product-form');
     const modalTitle = document.getElementById('modal-title');
     
-    // Open modal for new product
-    document.getElementById('add-product-btn').addEventListener('click', () => openModal());
+    // Event delegation cho nút "Thêm mới" trên header
+    document.addEventListener('click', function(e) {
+        // Kiểm tra nếu click vào nút "Thêm mới"
+        if (e.target.closest('a.bg-primary') && e.target.closest('a').getAttribute('href') === '#') {
+            e.preventDefault();
+            openModal();
+            return;
+        }
+    });
+    
+    // Fallback cho nút trong bảng trống
     document.getElementById('add-first-product-btn')?.addEventListener('click', () => openModal());
     
     // Close modal

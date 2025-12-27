@@ -4,221 +4,280 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 class Comment extends Model
 {
     use HasFactory;
 
+    protected $table = 'comments';
+
     protected $fillable = [
         'user_id',
-        'product_id', 
+        'product_id',
         'order_id',
         'digital_product_id',
         'digital_purchase_id',
         'rating',
         'comment',
         'is_verified',
-        'is_hidden'
+        'is_hidden',
+        // nếu bảng bạn có created_at thì vẫn OK
+        'created_at',
     ];
 
     protected $casts = [
         'is_verified' => 'boolean',
-        'is_hidden' => 'boolean',
-        'rating' => 'integer',
-        'created_at' => 'datetime'
+        'is_hidden'   => 'boolean',
+        'rating'      => 'integer',
+        'created_at'  => 'datetime',
     ];
 
-    public $timestamps = false; // Only has created_at, no updated_at
+    // Bảng comments chỉ có created_at, không có updated_at
+    public $timestamps = false;
 
-    /**
-     * Get the user who made the comment
-     */
+    /* =========================
+     * RELATIONS
+     * ========================= */
+
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Get the product being commented on
-     */
     public function product()
     {
         return $this->belongsTo(Product::class);
     }
-    
-    /**
-     * Get the digital product being commented on
-     */
+
     public function digitalProduct()
     {
         return $this->belongsTo(DigitalProduct::class);
     }
 
-    /**
-     * Get the order this comment belongs to
-     */
     public function order()
     {
         return $this->belongsTo(Order::class, 'order_id', 'order_id');
     }
-    
-    /**
-     * Get the digital purchase this comment belongs to
-     */
+
     public function digitalPurchase()
     {
-        return $this->belongsTo(DigitalProductPurchase::class);
+        return $this->belongsTo(DigitalProductPurchase::class, 'digital_purchase_id');
     }
 
-    /**
-     * Get comment images
-     */
     public function images()
     {
         return $this->hasMany(CommentImage::class);
     }
 
-    /**
-     * Get admin replies
-     */
     public function replies()
     {
         return $this->hasMany(CommentReply::class);
     }
 
-    /**
-     * Scope for verified comments only
-     */
-    public function scopeVerified($query)
+    /* =========================
+     * SCOPES
+     * ========================= */
+
+    // Chờ duyệt: chưa verified
+    public function scopePending($query)
     {
-        return $query->where('is_verified', true);
+        return $query->where('is_verified', 0);
     }
 
-    /**
-     * Scope for visible comments only
-     */
+    // Đã duyệt: verified = 1 và không bị ẩn
+    public function scopeApproved($query)
+    {
+        return $query->where('is_verified', 1)
+                     ->where('is_hidden', 0);
+    }
+
+    // Bị ẩn
+    public function scopeHidden($query)
+    {
+        return $query->where('is_hidden', 1);
+    }
+
+    // Lọc theo số sao
+    public function scopeWithRating($query, $rating)
+    {
+        return $query->where('rating', (int) $rating);
+    }
+
+    // Có hình ảnh (dựa vào relation images)
+    public function scopeWithImages($query)
+    {
+        return $query->whereHas('images');
+    }
+
+    // Hiển thị ngoài user: không ẩn
     public function scopeVisible($query)
     {
-        return $query->where('is_hidden', false);
+        return $query->where('is_hidden', 0);
     }
 
-    /**
-     * Check if user can comment on regular product for this order
-     * Business rule: Only users who bought and received the product can comment
-     */
+    // Đã xác thực
+    public function scopeVerified($query)
+    {
+        return $query->where('is_verified', 1);
+    }
+
+    /* =========================
+     * COMPUTED / HELPERS
+     * ========================= */
+
+    // status ảo để dùng trong blade: $review->status
+    public function getStatusAttribute(): string
+    {
+        if ((int) $this->is_hidden === 1) {
+            return 'hidden';
+        }
+        if ((int) $this->is_verified === 1) {
+            return 'approved';
+        }
+        return 'pending';
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->status === 'approved';
+    }
+
+    public function isHidden(): bool
+    {
+        return $this->status === 'hidden';
+    }
+
+    // formatted_created_at để blade dùng: $review->formatted_created_at
+    public function getFormattedCreatedAtAttribute(): string
+    {
+        if (!$this->created_at) return '';
+        return Carbon::parse($this->created_at)->format('d/m/Y H:i');
+    }
+
+    // image_urls để blade foreach: $review->image_urls
+    public function getImageUrlsAttribute(): array
+    {
+        // Tùy bạn lưu path gì trong CommentImage, mình làm kiểu phổ biến:
+        // - nếu lưu "storage/comments/xxx.jpg" hoặc "/storage/..." thì trả luôn
+        // - nếu chỉ lưu filename, thì ghép vào storage/comments/
+        $urls = [];
+
+        foreach ($this->images ?? [] as $img) {
+            $path = $img->image_path ?? $img->path ?? $img->image ?? null;
+            if (!$path) continue;
+
+            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                $urls[] = $path;
+            } elseif (str_starts_with($path, '/')) {
+                $urls[] = $path;
+            } elseif (str_starts_with($path, 'storage/') || str_starts_with($path, 'uploads/')) {
+                $urls[] = '/' . ltrim($path, '/');
+            } else {
+                // fallback: bạn chỉnh folder đúng nơi bạn lưu ảnh comment
+                $urls[] = '/storage/comments/' . ltrim($path, '/');
+            }
+        }
+
+        return $urls;
+    }
+
+    /* =========================
+     * BUSINESS RULES (giữ lại)
+     * ========================= */
+
     public static function canUserComment($userId, $productId, $orderId)
     {
-        // Check if order exists, belongs to user, is delivered, and contains the product
         $order = Order::where('order_id', $orderId)
-                     ->where('user_id', $userId)
-                     ->where('status', 'delivered')
-                     ->first();
+            ->where('user_id', $userId)
+            ->where('status', 'delivered')
+            ->first();
 
         if (!$order) {
             return false;
         }
 
-        // Check if the order contains this product
         $orderItem = OrderItem::where('order_id', $orderId)
-                             ->where('product_id', $productId)
-                             ->first();
+            ->where('product_id', $productId)
+            ->first();
 
         if (!$orderItem) {
             return false;
         }
 
-        // Check if user already commented on this product for this order
         $existingComment = self::where('user_id', $userId)
-                              ->where('product_id', $productId)
-                              ->where('order_id', $orderId)
-                              ->first();
+            ->where('product_id', $productId)
+            ->where('order_id', $orderId)
+            ->first();
 
         return !$existingComment;
     }
 
-    /**
-     * Check if user can comment on digital product for this purchase
-     * Business rule: Only users who bought the digital product can comment
-     */
     public static function canUserCommentDigitalProduct($userId, $digitalProductId, $digitalPurchaseId = null)
     {
-        // If specific purchase ID is provided, check that purchase
         if ($digitalPurchaseId) {
             $purchase = DigitalProductPurchase::where('id', $digitalPurchaseId)
-                                             ->where('user_id', $userId)
-                                             ->where('digital_product_id', $digitalProductId)
-                                             ->first();
-            
-            if (!$purchase) {
-                return false;
-            }
-            
-            // Check if user already commented on this digital product for this purchase
+                ->where('user_id', $userId)
+                ->where('digital_product_id', $digitalProductId)
+                ->first();
+
+            if (!$purchase) return false;
+
             $existingComment = self::where('user_id', $userId)
-                                  ->where('digital_product_id', $digitalProductId)
-                                  ->where('digital_purchase_id', $digitalPurchaseId)
-                                  ->first();
-            
+                ->where('digital_product_id', $digitalProductId)
+                ->where('digital_purchase_id', $digitalPurchaseId)
+                ->first();
+
             return !$existingComment;
         }
 
-        // Check if user has any purchase of this digital product
         $hasPurchase = DigitalProductPurchase::where('user_id', $userId)
-                                           ->where('digital_product_id', $digitalProductId)
-                                           ->exists();
+            ->where('digital_product_id', $digitalProductId)
+            ->exists();
 
-        if (!$hasPurchase) {
-            return false;
-        }
+        if (!$hasPurchase) return false;
 
-        // Check if user already commented on this digital product (any purchase)
         $existingComment = self::where('user_id', $userId)
-                              ->where('digital_product_id', $digitalProductId)
-                              ->first();
+            ->where('digital_product_id', $digitalProductId)
+            ->first();
 
         return !$existingComment;
     }
 
-    /**
-     * Get user's eligible orders for reviewing a product
-     */
     public static function getUserEligibleOrders($userId, $productId)
     {
         return Order::where('user_id', $userId)
-                   ->where('status', 'delivered')
-                   ->whereHas('items', function($query) use ($productId) {
-                       $query->where('product_id', $productId);
-                   })
-                   ->whereDoesntHave('comments', function($query) use ($productId) {
-                       $query->where('product_id', $productId);
-                   })
-                   ->get();
+            ->where('status', 'delivered')
+            ->whereHas('items', function ($query) use ($productId) {
+                $query->where('product_id', $productId);
+            })
+            ->whereDoesntHave('comments', function ($query) use ($productId) {
+                $query->where('product_id', $productId);
+            })
+            ->get();
     }
 
-    /**
-     * Get user's eligible digital purchases for reviewing a digital product
-     */
     public static function getUserEligibleDigitalPurchases($userId, $digitalProductId)
     {
         return DigitalProductPurchase::where('user_id', $userId)
-                                   ->where('digital_product_id', $digitalProductId)
-                                   ->whereDoesntHave('comments')
-                                   ->get();
+            ->where('digital_product_id', $digitalProductId)
+            ->whereDoesntHave('comments')
+            ->get();
     }
 
-    /**
-     * Create a new comment with business rule validation
-     */
     public static function createComment($data)
     {
-        // Validate business rules for regular products
         if (isset($data['product_id']) && isset($data['order_id'])) {
             if (!self::canUserComment($data['user_id'], $data['product_id'], $data['order_id'])) {
                 throw new \Exception('Bạn không thể đánh giá sản phẩm này. Chỉ khách hàng đã mua và nhận hàng mới có thể đánh giá.');
             }
         }
 
-        // Validate business rules for digital products
         if (isset($data['digital_product_id'])) {
             $digitalPurchaseId = $data['digital_purchase_id'] ?? null;
             if (!self::canUserCommentDigitalProduct($data['user_id'], $data['digital_product_id'], $digitalPurchaseId)) {

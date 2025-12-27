@@ -6,23 +6,21 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->boolean('is_active')->default(true)->after('status');
-        });
+        if (!Schema::hasColumn('products', 'is_active')) {
+            Schema::table('products', function (Blueprint $table) {
+                $table->boolean('is_active')->default(true)->after('status');
+            });
+        }
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->dropColumn('is_active');
-        });
+        if (Schema::hasColumn('products', 'is_active')) {
+            Schema::table('products', function (Blueprint $table) {
+                $table->dropColumn('is_active');
+            });
+        }
     }
 };

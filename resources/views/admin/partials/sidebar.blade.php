@@ -44,9 +44,9 @@
             {{-- Sản phẩm --}}
             <li>
                 <div class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors
-                    {{ request()->routeIs('admin.products.*') || request()->routeIs('admin.digital-products.*') ? 'text-primary bg-primary/10 dark:bg-primary/20 font-semibold' : 'text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-gray-800 group' }}">
+                    {{ request()->routeIs('admin.products.*') || request()->routeIs('admin.digital-products.*') || request()->routeIs('admin.reviews.*') ? 'text-primary bg-primary/10 dark:bg-primary/20 font-semibold' : 'text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-gray-800 group' }}">
                     <span class="material-icons-round
-                        {{ request()->routeIs('admin.products.*') || request()->routeIs('admin.digital-products.*') ? 'text-primary' : 'text-gray-400 group-hover:text-primary' }}">
+                        {{ request()->routeIs('admin.products.*') || request()->routeIs('admin.digital-products.*') || request()->routeIs('admin.reviews.*') ? 'text-primary' : 'text-gray-400 group-hover:text-primary' }}">
                         inventory_2
                     </span>
                     <span>Sản phẩm</span>
@@ -68,8 +68,9 @@
                         </a>
                     </li>
                     <li>
-                        <a class="block px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
-                           href="#">
+                        <a class="block px-3 py-1.5 text-sm transition-colors
+                           {{ request()->routeIs('admin.reviews.*') ? 'text-primary font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary' }}"
+                           href="{{ route('admin.reviews.index') }}">
                             Đánh giá
                         </a>
                     </li>
@@ -99,12 +100,6 @@
                         <a class="block px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
                            href="{{ route('admin.orders.index') }}">
                             Đơn hàng thường
-                        </a>
-                    </li>
-                    <li>
-                        <a class="block px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
-                           href="#">
-                            Đơn đặt làm (Custom)
                         </a>
                     </li>
                 </ul>
@@ -182,37 +177,49 @@
                             Danh sách người dùng
                         </a>
                     </li>
-                    <li>
-                        <a class="block px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
-                           href="#">
-                            Sản phẩm yêu thích
-                        </a>
-                    </li>
                 </ul>
             </li>
 
             {{-- Marketing --}}
             <li>
-                <div class="flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer transition-colors group">
-                    <span class="material-icons-round text-gray-400 group-hover:text-primary transition-colors">campaign</span>
-                    <span>Marketing</span>
+                <div class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors group
+                    {{ request()->routeIs('admin.posts.*') || request()->routeIs('admin.banners.*') || request()->routeIs('admin.vouchers.*') || request()->routeIs('admin.abandoned-carts.*') ? 'text-primary bg-primary/10 dark:bg-primary/20 font-semibold' : 'text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-gray-800' }}">
+                    <span class="material-icons-round transition-colors
+                        {{ request()->routeIs('admin.posts.*') || request()->routeIs('admin.banners.*') || request()->routeIs('admin.vouchers.*') || request()->routeIs('admin.abandoned-carts.*') ? 'text-primary' : 'text-gray-400 group-hover:text-primary' }}">
+                        campaign
+                    </span>
+                    <span class="flex-1">Marketing</span>
+                    @php
+                        $abandonedCartsCount = \App\Models\Cart::whereNotNull('user_id')
+                            ->where('updated_at', '<=', now()->subHours(24))
+                            ->distinct('user_id')
+                            ->count('user_id');
+                    @endphp
+                    @if($abandonedCartsCount > 0)
+                        <span class="bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+                            {{ $abandonedCartsCount }}
+                        </span>
+                    @endif
                 </div>
                 <ul class="space-y-1 pl-11 mt-1">
                     <li>
-                        <a class="block px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
+                        <a class="block px-3 py-1.5 text-sm transition-colors
+                           {{ request()->routeIs('admin.posts.*') || request()->routeIs('admin.banners.*') ? 'text-primary font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary' }}"
                            href="{{ route('admin.posts.index') }}">
                             Bài viết &amp; Banners
                         </a>
                     </li>
                     <li>
-                        <a class="block px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
-                           href="#">
+                        <a class="block px-3 py-1.5 text-sm transition-colors
+                           {{ request()->routeIs('admin.vouchers.*') ? 'text-primary font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary' }}"
+                           href="{{ route('admin.vouchers.index') }}">
                             Mã giảm giá
                         </a>
                     </li>
                     <li>
-                        <a class="block px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors"
-                           href="#">
+                        <a class="block px-3 py-1.5 text-sm transition-colors
+                           {{ request()->routeIs('admin.abandoned-carts.*') ? 'text-primary font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary' }}"
+                           href="{{ route('admin.abandoned-carts.index') }}">
                             Giỏ hàng bị bỏ quên
                         </a>
                     </li>

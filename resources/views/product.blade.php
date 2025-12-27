@@ -217,11 +217,31 @@
 
         <!-- Image Carousel -->
         <div class="image-carousel">
+            @php 
+                $ts = $product->updated_at?->timestamp ?? time();
+                $mainImage = $productImages[0] ?? $product->image ?? null;
+                
+                // Nếu DB đã lưu kiểu "/storage/products/xxx.jpg" hoặc "storage/products/xxx.jpg"
+                // thì url($mainImage) sẽ ra đúng link.
+                // Nếu DB chỉ lưu tên file "xxx.jpg" thì ta tự prefix vào storage/products.
+                if ($mainImage) {
+                    if (\Illuminate\Support\Str::startsWith($mainImage, ['http://', 'https://'])) {
+                        $imgSrc = $mainImage;
+                    } elseif (\Illuminate\Support\Str::startsWith($mainImage, ['/storage/', 'storage/'])) {
+                        $imgSrc = url($mainImage);
+                    } else {
+                        $imgSrc = asset('storage/products/' . $mainImage);
+                    }
+                } else {
+                    $imgSrc = asset('images/default.jpg'); // đổi nếu bạn có ảnh mặc định khác
+                }
+            @endphp
+            
             <img id="mainProductImage" 
-                 src="/PRODUCT-IMG/{{ $productImages[0] ?? $product->image ?? 'default.jpg' }}" 
+                 src="{{ $imgSrc }}?v={{ $ts }}" 
                  alt="{{ $product->name }}" 
                  class="carousel-image"
-                 onerror="this.src='https://via.placeholder.com/400x300/FAC638/FFFFFF?text={{ urlencode($product->name) }}'">
+                 onerror="this.onerror=null;this.src='{{ asset('images/default.jpg') }}';">
             
             @if($hasMultipleImages)
             <!-- Navigation Arrows -->
@@ -376,6 +396,43 @@
         let touchStartX = 0;
         let touchEndX = 0;
 
+        // Helper function để tìm ảnh thông minh
+        function getSmartImageUrl(imageName, timestamp) {
+            if (!imageName || imageName === 'default.jpg') {
+                return 'https://via.placeholder.com/400x300/FAC638/FFFFFF?text=SP';
+            }
+            
+            timestamp = timestamp || Date.now();
+            
+            // Kiểm tra nếu đã có đường dẫn đầy đủ
+            if (imageName.startsWith('http://') || imageName.startsWith('https://')) {
+                return imageName + '?v=' + timestamp;
+            }
+            
+            // Kiểm tra nếu đã có prefix storage
+            if (imageName.startsWith('/storage/') || imageName.startsWith('storage/')) {
+                return imageName + '?v=' + timestamp;
+            }
+            
+            // Nếu chỉ là tên file, thêm prefix storage/products
+            return `/storage/products/${imageName}?v=${timestamp}`;
+        }
+        
+        // Fallback function nếu ảnh không load được
+        function handleImageError(img, imageName, timestamp) {
+    timestamp = timestamp || Date.now();
+
+    if (imageName) {
+        // thử lại đúng đường dẫn storage/products
+        img.src = `/storage/products/${imageName}?v=${timestamp}`;
+        return;
+    }
+
+    // cuối cùng: ảnh mặc định
+    img.src = '{{ asset('images/default.jpg') }}';
+}
+
+
         $(document).ready(function() {
             loadRelatedProducts();
             loadProductVariants();
@@ -465,26 +522,30 @@
 
         // Thay đổi hình ảnh chính với hiệu ứng
         function changeImage(index, imageSrc) {
-            currentImageIndex = index;
-            const imageUrl = imageSrc ? `/PRODUCT-IMG/${imageSrc}` : `https://via.placeholder.com/400x300/FAC638/FFFFFF?text={{ urlencode($product->name) }}`;
-            
-            const $img = $('#mainProductImage');
-            
-            // Thêm hiệu ứng chuyển đổi
-            $img.addClass('changing');
-            
-            setTimeout(() => {
-                $img.attr('src', imageUrl);
-                $img.removeClass('changing');
-            }, 150);
-            
-            // Cập nhật dots
-            $('.carousel-dot').removeClass('active');
-            $(`.carousel-dot[data-index="${index}"]`).addClass('active');
-            
-            // Cập nhật counter
-            $('#currentImageNumber').text(index + 1);
-        }
+    currentImageIndex = index;
+
+    const ts = {{ $product->updated_at?->timestamp ?? time() }};
+    const imageUrl = imageSrc
+        ? getSmartImageUrl(imageSrc, ts)
+        : '{{ asset('images/default.jpg') }}';
+
+    const $img = $('#mainProductImage');
+
+    $img.addClass('changing');
+
+    setTimeout(() => {
+        $img.attr('src', imageUrl);
+        $img.off('error').on('error', function() {
+            handleImageError(this, imageSrc, ts);
+        });
+        $img.removeClass('changing');
+    }, 150);
+
+    $('.carousel-dot').removeClass('active');
+    $(`.carousel-dot[data-index="${index}"]`).addClass('active');
+    $('#currentImageNumber').text(index + 1);
+}
+
 
         function loadProductVariants() {
             $.get('/api/products/{{ $product->id }}/variants', function(response) {
@@ -598,7 +659,7 @@
                 
                 products.forEach(item => {
                     const imageUrl = item.image && item.image !== 'default.jpg' 
-                        ? `/PRODUCT-IMG/${item.image}` 
+                        ? getSmartImageUrl(item.image, item.updated_at ? new Date(item.updated_at).getTime() : Date.now()) 
                         : `https://via.placeholder.com/150x120/FAC638/FFFFFF?text=${encodeURIComponent(item.name.substring(0, 2))}`;
                     
                     const price = parseFloat(item.price) || 0;
