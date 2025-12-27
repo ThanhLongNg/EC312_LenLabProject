@@ -1,4 +1,4 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://www.uit.edu.vn/sites/vi/files/resize/images/Logos/Logo_UIT_Web_Transparent-218x261.png" width="400" alt="UIT Logo"></a></p>
+<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://www.uit.edu.vn/sites/vi/files/resize/images/Logos/Logo_UIT_Web_Transparent-218x261.png" width="40" alt="UIT Logo"></a></p>
 
 # **THIẾT KẾ HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ KINH DOANH SẢN PHẨM LEN HANDMADE - LENLAB**
 
