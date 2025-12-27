@@ -111,11 +111,11 @@ Xây dựng một hệ thống thương mại điện tử chuyên biệt cho c�
 
 ## **📁 Cấu trúc thư mục**
 
+```plaintext
 lenlab-project/
 ├── app/
 │   ├── Http/Controllers/     # 40+ Controllers
 │   │   ├── Admin/           # Admin controllers
-
 │   │   ├── Auth/            # Authentication controllers
 │   │   └── ...              # Public controllers
 │   ├── Models/              # 25+ Models
@@ -143,4 +143,3 @@ lenlab-project/
 └── public/
     ├── storage/            # File uploads
     └── product-img/        # Product images
-
