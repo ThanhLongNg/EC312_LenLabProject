@@ -1,59 +1,144 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://www.uit.edu.vn/sites/vi/files/resize/images/Logos/Logo_UIT_Web_Transparent-218x261.png" width="400" alt="UIT Logo"></a></p>
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+# **THIẾT KẾ HỆ THỐNG THƯƠNG MẠI ĐIỆN TỬ KINH DOANH SẢN PHẨM LEN HANDMADE - LENLAB**
 
-## About Laravel
+# **Giới thiệu môn học**
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Tên môn học**: Thiết kế hệ thống thương mại điện tử
+- **Mã môn học**: EC312
+- **Mã lớp**: EC312.Q11
+- **Năm học**: HK1 (2025 - 2026)
+- **Giảng viên**: ThS. Trình Trọng Tín
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## **Giới thiệu**
+**LenLab** là sản phẩm môn học EC312 - Thiết kế hệ thống thương mại điện tử. Đây là hệ thống thương mại điện tử chuyên cung cấp các sản phẩm **len handmade** và đồ thủ công. Dự án hướng tới việc giải quyết các vấn đề của người dùng từ việc tính toán nguyên liệu chính xác cho đến tự động hóa quy trình chăm sóc khách hàng 24/7. Hệ thống hỗ trợ cả sản phẩm vật lý và sản phẩm số, mang lại trải nghiệm mượt mà cho người dùng và hiệu quả cho quản trị viên.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+# **Thành viên Nhóm 2**
 
-## Learning Laravel
+| STT | Họ tên                  | MSSV     |
+|-----|-------------------------|----------|
+| 1   | Nguyễn Thành Long       | 23520885 |
+| 2   | Nguyễn Thị Quỳnh Như    | 23521128 |
+| 3   | Lê Nguyễn Minh Thư      | 23521538 |
+| 4   | Võ Ngọc Tuyền           | 23521756 |
+| 5   | Đỗ Văn Vũ               | 23521804 |
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## **Mục tiêu dự án**
+Xây dựng một hệ thống thương mại điện tử chuyên biệt cho các sản phẩm len và đồ thủ công, có khả năng:
+- Kinh doanh song song cả sản phẩm vật lý và sản phẩm số.
+- Số hóa quy trình bán hàng truyền thống.
+- Giải quyết các khó khăn thực tế của người dùng, từ việc tính toán nguyên liệu chính xác đến tự động hóa quy trình chăm sóc khách hàng.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## **Chức năng chính**
 
-## Laravel Sponsors
+### 🛒 **E-commerce Core**
+- **Quản lý sản phẩm**:
+  - Sản phẩm có nhiều biến thể (kích thước, màu sắc).
+- **Giỏ hàng thông minh**:
+  - Hỗ trợ cả guest user và người dùng đã đăng nhập.
+- **Checkout đa bước**:
+  - Địa chỉ → Thanh toán → Xác nhận.
+- **Quản lý đơn hàng**:
+  - Theo dõi trạng thái đơn hàng: Đang xử lý → Đang giao → Đã giao.
+- **Hệ thống voucher**:
+  - Mã giảm giá với điều kiện tối thiểu.
+- **Tính phí ship**:
+  - Tính phí vận chuyển theo 4 zone và thời gian giao hàng.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 💎 **Sản phẩm số (Digital Products)**
+- **Bán file/link số**:
+  - Giao hàng tự động qua email.
+- **Giới hạn download và thời gian truy cập**:
+  - Hệ thống tự động đóng dấu bản quyền (Watermark) thông tin khách hàng lên file hướng dẫn.
 
-### Premium Partners
+### ⭐ **Hệ thống đánh giá**
+- **Đánh giá 5 sao với hình ảnh**:
+  - Kiểm duyệt admin và phản hồi từ admin.
+  - Yêu cầu mua hàng đã xác thực.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### 🎨 **Tùy chỉnh giao diện**
+- **Cấu hình logo, favicon, màu sắc**.
+- **Quản lý banner trang chủ**.
+- **Cài đặt động lưu trong database**.
 
-## Contributing
+### 🤖 **AI Chatbot (3 chức năng chính)**
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+#### 1. **Hỏi đáp 24/7 (FAQ)**
+- Trả lời tự động các câu hỏi thường gặp về giao hàng, đổi trả, sản phẩm, thanh toán.
 
-## Code of Conduct
+#### 2. **Yêu cầu sản phẩm cá nhân hóa**
+- Thu thập thông tin: loại sản phẩm, kích thước, mô tả.
+- Upload ảnh tham khảo.
+- Workflow hoàn chỉnh: Yêu cầu → Admin trao đổi → Báo giá → Thanh toán → Sản xuất.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+#### 3. **Ước tính nguyên liệu**
+- Tính toán chi phí nguyên liệu cho các dự án DIY (Do it Yourself).
+- Thêm trực tiếp vào giỏ hàng.
 
-## Security Vulnerabilities
+## **📊 Quản lý Admin**
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### **Dashboard Features**
+- Thống kê tổng quan doanh thu, hành vi khách hàng, hiệu suất bán hàng.
+- Quản lý đơn hàng với các thao tác batch (sửa đổi nhiều đơn hàng cùng lúc).
+- Kiểm duyệt và quản lý đánh giá từ khách hàng.
+- Quản lý chatbot và các thông tin phân tích (analytics).
+- Cấu hình giao diện động.
+- Quản lý voucher và FAQ.
 
-## License
+### **Chatbot Management**
+- Xem lịch sử chat với khách hàng.
+- Quản lý yêu cầu sản phẩm cá nhân hóa.
+- Chat hỗ trợ trực tiếp với khách hàng.
+- Phân tích và thống kê hành vi sử dụng chatbot.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## **🏗️ Kiến trúc hệ thống**
+
+### **Backend (Laravel 12)**
+- **PHP**: >= 8.2
+- **Framework**: Laravel 12
+- **Database**: MySQL
+- **Authentication**: Laravel Breeze + Google OAuth
+- **Queue**: Database driver
+- **Cache**: Database driver
+
+### **Frontend**
+- **Template Engine**: Blade
+- **CSS Framework**: Tailwind CSS 3
+- **JavaScript**: Alpine.js 3
+- **Build Tool**: Vite 7
+- **HTTP Client**: Axios
+
+## **📁 Cấu trúc thư mục**
+
+```plaintext
+lenlab-project/
+├── app/
+│   ├── Http/Controllers/     # 40+ Controllers
+│   │   ├── Admin/           # Admin controllers
+│   │   ├── Auth/            # Authentication controllers
+│   │   └── ...              # Public controllers
+│   ├── Models/              # 25+ Models
+│   ├── Helpers/             # Helper classes
+│   │   ├── ShippingHelper.php
+│   │   ├── SettingsHelper.php
+│   │   └── OrderItemHelper.php
+│   ├── Mail/                # Email templates
+│   └── View/                # View components
+├── resources/
+│   ├── views/               # 40+ Blade templates
+│   │   ├── admin/          # Admin views
+│   │   ├── components/     # Reusable components
+│   │   └── ...             # Public views
+│   ├── css/                # Tailwind CSS
+│   └── js/                 # Alpine.js, Bootstrap
+├── database/
+│   ├── migrations/         # 50+ Migrations
+│   ├── seeders/            # Data seeders
+│   └── data/               # Province/ward data
+├── routes/
+│   ├── web.php             # Main routes
+│   ├── api.php             # API routes
+│   └── auth.php            # Auth routes
+└── public/
+    ├── storage/            # File uploads
+    └── product-img/        # Product images
